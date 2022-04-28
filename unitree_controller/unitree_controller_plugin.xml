@@ -1,0 +1,8 @@
+<library path="unitree_controller">
+  <class name="unitree_controller/UnitreeController" type="unitree_controller::UnitreeController" 
+  base_class_type="controller_interface::ControllerInterface">
+  <description>
+    Controller for Unitree's robots.
+  </description>
+  </class>
+</library>

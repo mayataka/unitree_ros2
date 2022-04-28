@@ -1,0 +1,18 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>inekf_vendor</name>
+  <version>0.0.0</version>
+  <description>Wrapper around InEKF to make it available to the ROS2 ecosystem.</description>
+  <maintainer email="katayama.25w@st.kyoto-u.ac.jp">Sotaro Katayama</maintainer>
+  <license>TODO</license> 
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+
+  <depend>eigen</depend>
+  <!-- <depend>pinocchio</depend> -->
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>

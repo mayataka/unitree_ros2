@@ -1,5 +1,5 @@
-#ifndef UNITREE_MPC__UNITREE_GAZEBO_SYSTEM_HPP_
-#define UNITREE_MPC__UNITREE_GAZEBO_SYSTEM_HPP_
+#ifndef UNITREE_GAZEBO__UNITREE_GAZEBO_SYSTEM_HPP_
+#define UNITREE_GAZEBO__UNITREE_GAZEBO_SYSTEM_HPP_
 
 #include <memory>
 #include <string>
@@ -67,5 +67,4 @@ private:
 
 }  // namespace unitree_gazebo
 
-#endif  // UNITREE_MPC__UNITREE_GAZEBO_SYSTEM_HPP_
- 
+#endif  // UNITREE_GAZEBO__UNITREE_GAZEBO_SYSTEM_HPP_

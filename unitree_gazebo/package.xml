@@ -26,8 +26,8 @@
   <depend>ros2_controllers</depend>
   <depend>gazebo_ros2_control</depend>
 
-  <exec_depend>unitree_mpc</exec_depend>
   <exec_depend>unitree_description</exec_depend>
+  <exec_depend>unitree_controller</exec_depend>
 
   <test_depend>ament_lint_auto</test_depend>
   <test_depend>ament_lint_common</test_depend>

@@ -69,6 +69,11 @@ def generate_launch_description():
     #     executable='spawner.py',
     #     arguments=['RR_foot_force_sensor_broadcaster', '--controller-manager', '/controller_manager'],
     # )
+    spawn_controller = Node(
+        package='controller_manager',
+        executable='spawner.py',
+        arguments=['unitree_controller', '--controller-manager', '/controller_manager'],
+    )
 
     return LaunchDescription([
         gazebo,
@@ -80,4 +85,5 @@ def generate_launch_description():
         # spawn_FR_foot_force_sensor_broadcaster,
         # spawn_RL_foot_force_sensor_broadcaster,
         # spawn_RR_foot_force_sensor_broadcaster,
+        spawn_controller
     ])
