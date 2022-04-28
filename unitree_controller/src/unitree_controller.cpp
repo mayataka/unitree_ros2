@@ -153,7 +153,7 @@ controller_interface::return_type UnitreeController::update()
   //   foot_force_sensor_[i] = foot_force_sensor_interface_[i].get().get_value();
   // }
 
-  state_estimator_->update(imu_ang_vel_, imu_lin_acc_, qJ_, dqJ_, ddqJ_, tauJ_, foot_force_sensor_);
+  // state_estimator_->update(imu_ang_vel_, imu_lin_acc_, qJ_, dqJ_, ddqJ_, tauJ_, foot_force_sensor_);
   q_est_.template head<3>()     = state_estimator_->getBasePositionEstimate();
   q_est_.template segment<4>(3) = state_estimator_->getBaseQuaternionEstimate();
   q_est_.template tail<12>()    = qJ_;

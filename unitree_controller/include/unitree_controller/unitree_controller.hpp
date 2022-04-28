@@ -103,7 +103,6 @@ protected:
   using RealtimeStatePublisher = realtime_tools::RealtimePublisher<unitree_msgs::msg::State>;
   std::shared_ptr<StatePublisher> state_publisher_ = nullptr;
   std::shared_ptr<RealtimeStatePublisher> realtime_state_publisher_ = nullptr;
-  bool is_publisher_active_ = false;
 
   double dt_;
   Vector19d q_est_;
@@ -113,7 +112,7 @@ protected:
   Vector3d imu_ang_vel_, imu_lin_acc_;
   std::vector<double> foot_force_sensor_;
 
-  std::shared_ptr<inekf::StateEstimator> state_estimator_;
+  std::shared_ptr<inekf::StateEstimator> state_estimator_ = nullptr;
 
   void auto_declare_params();
 
