@@ -58,7 +58,6 @@ private:
 
   std::array<double, 12> qJ_;
   std::array<double, 12> dqJ_;
-  std::array<double, 12> ddqJ_;
   std::array<double, 12> tauJ_;
   std::array<double, 4> imu_quaternion_;
   std::array<double, 3> imu_gyroscope_;

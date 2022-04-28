@@ -44,9 +44,6 @@ public:
   /// \brief vector with the current joint velocity
   std::vector<double> joint_velocity_;
 
-  /// \brief vector with the current joint velocity
-  std::vector<double> joint_acceleration_;
-
   /// \brief vector with the current joint effort
   std::vector<double> joint_effort_;
 
@@ -128,7 +125,6 @@ void UnitreeGazeboSystem::registerJoints(
   this->dataPtr->joint_control_methods_.resize(this->dataPtr->n_dof_);
   this->dataPtr->joint_position_.resize(this->dataPtr->n_dof_);
   this->dataPtr->joint_velocity_.resize(this->dataPtr->n_dof_);
-  this->dataPtr->joint_acceleration_.resize(this->dataPtr->n_dof_);
   this->dataPtr->joint_effort_.resize(this->dataPtr->n_dof_);
   this->dataPtr->joint_position_cmd_.resize(this->dataPtr->n_dof_);
   this->dataPtr->joint_velocity_cmd_.resize(this->dataPtr->n_dof_);
@@ -136,7 +132,6 @@ void UnitreeGazeboSystem::registerJoints(
   this->dataPtr->Kp_cmd_.resize(this->dataPtr->n_dof_);
   this->dataPtr->Kd_cmd_.resize(this->dataPtr->n_dof_);
   std::fill(this->dataPtr->joint_velocity_.begin(), this->dataPtr->joint_velocity_.end(), 0.0);
-  std::fill(this->dataPtr->joint_acceleration_.begin(), this->dataPtr->joint_acceleration_.end(), 0.0);
 
   for (unsigned int j = 0; j < this->dataPtr->n_dof_; j++) {
     std::string joint_name = this->dataPtr->joint_names_[j] = hardware_info.joints[j].name;
@@ -216,13 +211,6 @@ void UnitreeGazeboSystem::registerJoints(
           joint_name,
           hardware_interface::HW_IF_VELOCITY,
           &this->dataPtr->joint_velocity_[j]);
-      }
-      if (hardware_info.joints[j].state_interfaces[i].name == "acceleration") {
-        RCLCPP_INFO_STREAM(this->nh_->get_logger(), "\t\t acceleration");
-        this->dataPtr->state_interfaces_.emplace_back(
-          joint_name,
-          hardware_interface::HW_IF_ACCELERATION,
-          &this->dataPtr->joint_acceleration_[j]);
       }
       if (hardware_info.joints[j].state_interfaces[i].name == "effort") {
         RCLCPP_INFO_STREAM(this->nh_->get_logger(), "\t\t effort");
@@ -409,13 +397,7 @@ hardware_interface::return_type UnitreeGazeboSystem::read()
   const gazebo::common::Time gz_time_now = this->dataPtr->parent_model_->GetWorld()->SimTime();
   const rclcpp::Time sim_time_ros(gz_time_now.sec, gz_time_now.nsec);
   const rclcpp::Duration sim_period = sim_time_ros - this->dataPtr->last_update_sim_time_ros_;
-  const double dsim_period = sim_period.seconds();
   for (unsigned int j = 0; j < this->dataPtr->joint_names_.size(); j++) {
-    if (this->dataPtr->sim_joints_[j] && dsim_period > 0) {
-      this->dataPtr->joint_acceleration_[j] 
-          = (this->dataPtr->sim_joints_[j]->GetVelocity(0) 
-              - this->dataPtr->joint_velocity_[j]) / dsim_period;
-    }
     if (this->dataPtr->sim_joints_[j]) {
       this->dataPtr->joint_position_[j] = this->dataPtr->sim_joints_[j]->Position(0);
       this->dataPtr->joint_velocity_[j] = this->dataPtr->sim_joints_[j]->GetVelocity(0);

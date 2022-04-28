@@ -40,7 +40,6 @@ joint_state_broadcaster:
     state_interfaces:
       - position
       - velocity
-      - acceleration
       - effort
 
 imu_sensor_broadcaster:

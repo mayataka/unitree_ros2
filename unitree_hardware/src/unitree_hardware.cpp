@@ -20,11 +20,11 @@ hardware_interface::return_type UnitreeHardware::configure(
   safety_ = std::make_shared<UNITREE_LEGGED_SDK::Safety>(UNITREE_LEGGED_SDK::LeggedType::A1);
   state_ = UNITREE_LEGGED_SDK::LowState();
   cmd_ = UNITREE_LEGGED_SDK::LowCmd();
+  cmd_.levelFlag = UNITREE_LEGGED_SDK::LOWLEVEL;
   udp_->InitCmdData(cmd_);
   // Joint states
   qJ_.fill(std::numeric_limits<double>::quiet_NaN());
   dqJ_.fill(std::numeric_limits<double>::quiet_NaN());
-  ddqJ_.fill(std::numeric_limits<double>::quiet_NaN());
   tauJ_.fill(std::numeric_limits<double>::quiet_NaN());
   // Imu states
   imu_quaternion_.fill(std::numeric_limits<double>::quiet_NaN());
@@ -50,24 +50,22 @@ hardware_interface::return_type UnitreeHardware::configure(
   for (const hardware_interface::ComponentInfo & joint : info_.joints)
   {
     // check joint state interfaces
-    if (joint.state_interfaces.size() != 4)
+    if (joint.state_interfaces.size() != 3)
     {
       RCLCPP_FATAL(
         rclcpp::get_logger("UnitreeHardware"),
-        "Joint '%s'has %d state interfaces. 4 expected.", joint.name.c_str(), joint.state_interfaces.size());
+        "Joint '%s'has %d state interfaces. 3 expected.", joint.name.c_str(), joint.state_interfaces.size());
       return hardware_interface::return_type::ERROR;
     }
     if (!(joint.state_interfaces[0].name == hardware_interface::HW_IF_POSITION ||
           joint.state_interfaces[0].name == hardware_interface::HW_IF_VELOCITY ||
-          joint.state_interfaces[0].name == hardware_interface::HW_IF_ACCELERATION || 
           joint.state_interfaces[0].name == hardware_interface::HW_IF_EFFORT))
     {
       RCLCPP_FATAL(
         rclcpp::get_logger("UnitreeHardware"),
         "Joint '%s' has %s state interfaces. Expected %s, %s, %s, or %s.", joint.name.c_str(),
         joint.state_interfaces[0].name.c_str(), hardware_interface::HW_IF_POSITION,
-        hardware_interface::HW_IF_VELOCITY, hardware_interface::HW_IF_ACCELERATION, 
-        hardware_interface::HW_IF_EFFORT);
+        hardware_interface::HW_IF_VELOCITY, hardware_interface::HW_IF_EFFORT);
       return hardware_interface::return_type::ERROR;
     }
     // check joint command interfaces
@@ -219,8 +217,6 @@ UnitreeHardware::export_state_interfaces()
     state_interfaces.emplace_back(hardware_interface::StateInterface(
       info_.joints[i].name, hardware_interface::HW_IF_VELOCITY, &dqJ_[i]));
     state_interfaces.emplace_back(hardware_interface::StateInterface(
-      info_.joints[i].name, hardware_interface::HW_IF_ACCELERATION, &ddqJ_[i]));
-    state_interfaces.emplace_back(hardware_interface::StateInterface(
       info_.joints[i].name, hardware_interface::HW_IF_EFFORT, &tauJ_[i]));
   }
   // Imu state
@@ -281,14 +277,6 @@ hardware_interface::return_type UnitreeHardware::start()
   RCLCPP_INFO(
     rclcpp::get_logger("UnitreeHardware"), "Starting... please wait...");
 
-  // for (int i = 0; i <= hw_start_sec_; i++)
-  // {
-  //   rclcpp::sleep_for(std::chrono::seconds(1));
-  //   RCLCPP_INFO(
-  //     rclcpp::get_logger("UnitreeHardware"), "%.1f seconds left...",
-  //     hw_start_sec_ - i);
-  // }
-
   // Set some default values
   for (std::size_t i = 0; i < 12; i++)
   {
@@ -299,10 +287,6 @@ hardware_interface::return_type UnitreeHardware::start()
     if (std::isnan(dqJ_[i]))
     {
       dqJ_[i] = 0;
-    }
-    if (std::isnan(ddqJ_[i]))
-    {
-      ddqJ_[i] = 0;
     }
     if (std::isnan(tauJ_[i]))
     {
@@ -328,7 +312,6 @@ hardware_interface::return_type UnitreeHardware::start()
     {
       Kd_cmd_[i] = 0;
     }
-    // control_level_[i] = integration_level_t::UNDEFINED;
   }
   status_ = hardware_interface::status::STARTED;
 
@@ -341,17 +324,7 @@ hardware_interface::return_type UnitreeHardware::stop()
 {
   RCLCPP_INFO(
     rclcpp::get_logger("UnitreeHardware"), "Stopping... please wait...");
-
-  // for (int i = 0; i <= hw_stop_sec_; i++)
-  // {
-  //   rclcpp::sleep_for(std::chrono::seconds(1));
-  //   RCLCPP_INFO(
-  //     rclcpp::get_logger("UnitreeHardware"), "%.1f seconds left...",
-  //     hw_stop_sec_ - i);
-  // }
-
   status_ = hardware_interface::status::STOPPED;
-
   RCLCPP_INFO(
     rclcpp::get_logger("UnitreeHardware"), "System successfully stopped!");
 
@@ -367,7 +340,6 @@ hardware_interface::return_type UnitreeHardware::read()
   {
     qJ_[i]   = static_cast<double>(state_.motorState[joints_[i]].q);
     dqJ_[i]  = static_cast<double>(state_.motorState[joints_[i]].dq);
-    ddqJ_[i] = static_cast<double>(state_.motorState[joints_[i]].ddq);
     tauJ_[i] = static_cast<double>(state_.motorState[joints_[i]].tauEst);
   }
   // Imu state
