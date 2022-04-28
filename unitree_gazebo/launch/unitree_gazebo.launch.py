@@ -34,7 +34,7 @@ def generate_launch_description():
         executable='spawn_entity.py', 
         arguments=['-topic', 'robot_description', '-entity', 'a1', 
                    '-x', '0', '-y', '0', '-z', '0.5'],
-                #    '-x', '0', '-y', '0', '-z', '0.8', '-unpause'],
+                #    '-x', '0', '-y', '0', '-z', '0.5', '-unpause'],
         output='screen',
     )
 
@@ -48,6 +48,7 @@ def generate_launch_description():
         executable='spawner.py',
         arguments=['imu_sensor_broadcaster', '--controller-manager', '/controller_manager'],
     )
+    # TODO: add force sensors
     # spawn_FL_foot_force_sensor_broadcaster = Node(
     #     package='controller_manager',
     #     executable='spawner.py',
@@ -68,24 +69,15 @@ def generate_launch_description():
     #     executable='spawner.py',
     #     arguments=['RR_foot_force_sensor_broadcaster', '--controller-manager', '/controller_manager'],
     # )
-    spawn_mpc = Node(
-        package='controller_manager',
-        executable='spawner.py',
-        arguments=['unitree_mpc', '--controller-manager', '/controller_manager'],
-        # prefix=['xterm -e gdb -ex run --args'], # for debugging
-        
-    )
 
     return LaunchDescription([
         gazebo,
         spawn_robot_state_publisher,
-        # spawn_entity,
+        spawn_entity,
         spawn_joint_state_broadcaster,
         spawn_imu_sensor_broadcaster,
         # spawn_FL_foot_force_sensor_broadcaster,
         # spawn_FR_foot_force_sensor_broadcaster,
         # spawn_RL_foot_force_sensor_broadcaster,
         # spawn_RR_foot_force_sensor_broadcaster,
-        spawn_entity,
-        spawn_mpc,
     ])
