@@ -14,7 +14,6 @@ UnitreeController::UnitreeController()
   v_est_.setZero();
   qJ_.setZero();
   dqJ_.setZero();
-  ddqJ_.setZero();
   tauJ_.setZero();
   qJ_cmd_.setZero();
   dqJ_cmd_.setZero();
@@ -37,7 +36,6 @@ controller_interface::return_type UnitreeController::init(
     return ret;
   }
   auto_declare_params();
-
   return controller_interface::return_type::OK;
 }
 
@@ -51,7 +49,6 @@ controller_interface::return_type UnitreeController::init(
     return ret;
   }
   auto_declare_params();
-
   return controller_interface::return_type::OK;
 }
 
@@ -147,13 +144,8 @@ controller_interface::return_type UnitreeController::update()
   {
     imu_lin_acc_.coeffRef(i) = imu_linear_acceleration_interface_[i].get().get_value();
   }
-  // // TODO: get foot force sensor values
-  // for (std::size_t i = 0 ; i < 4; ++i) 
-  // {
-  //   foot_force_sensor_[i] = foot_force_sensor_interface_[i].get().get_value();
-  // }
 
-  // state_estimator_->update(imu_ang_vel_, imu_lin_acc_, qJ_, dqJ_, ddqJ_, tauJ_, foot_force_sensor_);
+  state_estimator_->update(imu_ang_vel_, imu_lin_acc_, qJ_, dqJ_, tauJ_);
   q_est_.template head<3>()     = state_estimator_->getBasePositionEstimate();
   q_est_.template segment<4>(3) = state_estimator_->getBaseQuaternionEstimate();
   q_est_.template tail<12>()    = qJ_;
@@ -161,9 +153,49 @@ controller_interface::return_type UnitreeController::update()
   v_est_.template segment<3>(3) = imu_ang_vel_;
   v_est_.template tail<12>()    = state_estimator_->getJointVelocityEstimate();
 
-  // 
-  // control update here...
-  //
+  // control update 
+  switch (current_control_mode_)
+  {
+  case ControlMode::StandingUp:
+    qJ_cmd_ = q_standing_.template tail<12>();
+    dqJ_cmd_.setZero(); 
+    tauJ_cmd_.setZero(); 
+    Kp_cmd_.fill(20.0);
+    Kd_cmd_.fill(10.0);
+    break;
+  case ControlMode::Idling:
+    if (previous_control_mode_ == ControlMode::StandingUp) {
+      const double ground_height = 0.0;
+      state_estimator_->init(q_standing_.template head<3>(), 
+                             quat_.coeffs(), qJ_, ground_height);
+    }
+    qJ_cmd_ = q_standing_.template tail<12>();
+    dqJ_cmd_.setZero(); 
+    tauJ_cmd_.setZero(); 
+    Kp_cmd_.fill(35.0);
+    Kd_cmd_.fill(1.0);
+    break;
+  case ControlMode::Control:
+    // TODO: provide interface of this main control loop
+    break;
+  case ControlMode::SittingDown:
+    qJ_cmd_ = q_sitting_down_.template tail<12>();
+    dqJ_cmd_.setZero(); 
+    tauJ_cmd_.setZero(); 
+    Kp_cmd_.fill(10.0);
+    Kd_cmd_.fill(15.0);
+    break;
+  default: // ControlMode::ZeroTorque
+    constexpr double kPosStopF = (2.146E+9f);
+    constexpr double kVelStopF = (16000.0f);
+    qJ_cmd_.fill(kPosStopF);
+    dqJ_cmd_.fill(kVelStopF); 
+    tauJ_cmd_.setZero(); 
+    Kp_cmd_.setZero();
+    Kd_cmd_.setZero();
+    break;
+  }
+  previous_control_mode_ = current_control_mode_;
 
   // set joint commands
   for (std::size_t i = 0 ; i < 12; ++i)
@@ -175,6 +207,7 @@ controller_interface::return_type UnitreeController::update()
     Kd_cmd_interface_[i].get().set_value(Kd_cmd_.coeff(i));
   }
 
+  // publish state
   if (realtime_state_publisher_->trylock())
   {
     auto& state = realtime_state_publisher_->msg_;
@@ -221,10 +254,22 @@ UnitreeController::on_configure(const rclcpp_lifecycle::State &)
   }
 
   // init state publisher 
-//   const double state_publish_rate = node_->get_parameter("state_publish_rate").get_value<double>();
+  // const double state_publish_rate = node_->get_parameter("state_publish_rate").get_value<double>();
   RCLCPP_INFO(logger, "Controller state will be published at %.2f Hz.", control_rate);
   state_publisher_ = node_->create_publisher<unitree_msgs::msg::State>("~/state", rclcpp::SystemDefaultsQoS());
   realtime_state_publisher_ = std::make_shared<RealtimeStatePublisher>(state_publisher_);
+
+  // init ResetStateEstimation server
+  reset_state_estimation_server_ = node_->create_service<unitree_msgs::srv::ResetStateEstimation>(
+    "~/reset_state_estimation", std::bind(&UnitreeController::resetStateEstimationCallback,
+                                          this, std::placeholders::_1, std::placeholders::_2));
+
+  // init SetControlMode server
+  current_control_mode_ = ControlMode::ZeroTorque;
+  previous_control_mode_ = ControlMode::ZeroTorque;
+  set_control_mode_server_ = node_->create_service<unitree_msgs::srv::SetControlMode>(
+    "~/set_control_mode", std::bind(&UnitreeController::setControlModeCallback,
+                                    this, std::placeholders::_1, std::placeholders::_2));
 
   // init InEKF
   const std::string urdf_pkg = ament_index_cpp::get_package_share_directory("a1_description");
@@ -487,6 +532,62 @@ rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn
 UnitreeController::on_shutdown(const rclcpp_lifecycle::State &)
 {
   return rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn::SUCCESS;
+}
+
+void UnitreeController::resetStateEstimationCallback(
+    const std::shared_ptr<unitree_msgs::srv::ResetStateEstimation::Request> request,
+    std::shared_ptr<unitree_msgs::srv::ResetStateEstimation::Response> response)
+{
+  const double ground_height = 0.0;
+  state_estimator_->init({request->pos_x, request->pos_y, 0.318}, 
+                         quat_.coeffs(), qJ_, ground_height);
+  response->accept = true;
+}
+
+void UnitreeController::setControlModeCallback(
+    const std::shared_ptr<unitree_msgs::srv::SetControlMode::Request> request,
+    std::shared_ptr<unitree_msgs::srv::SetControlMode::Response> response)
+{
+  response->current_control_mode = static_cast<std::uint8_t>(current_control_mode_);
+  response->accept = false;
+  const ControlMode request_control_mode = static_cast<ControlMode>(request->control_mode);
+  switch (current_control_mode_)
+  {
+  case ControlMode::StandingUp:
+    if (request_control_mode == ControlMode::Idling)
+    {
+      response->accept = true;
+    }
+    break;
+  case ControlMode::Idling:
+    if (request_control_mode == ControlMode::Control)
+    {
+      response->accept = true;
+    }
+    break;
+  case ControlMode::Control:
+    if (request_control_mode == ControlMode::Idling 
+        || request_control_mode == ControlMode::SittingDown)
+    {
+      response->accept = true;
+    }
+    break;
+  case ControlMode::SittingDown:
+    if (request_control_mode == ControlMode::ZeroTorque)
+    {
+      response->accept = true;
+    }
+    break;
+  default: // ControlMode::ZeroTorque
+    if (request_control_mode == ControlMode::StandingUp)
+    {
+      response->accept = true;
+    }
+    break;
+  }
+  if (response->accept) {
+    current_control_mode_ = request_control_mode;
+  }
 }
 
 }  // namespace unitree_controller

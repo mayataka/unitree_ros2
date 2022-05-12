@@ -1,0 +1,4 @@
+uint8 control_mode
+---
+bool accept
+uint8 current_control_mode

@@ -26,10 +26,14 @@ find_package(rosidl_default_generators REQUIRED)
 set(msg_files
   "msg/State.msg"
 )
+set(srv_files
+  "srv/ResetStateEstimation.srv"
+  "srv/SetControlMode.srv"
+)
 
 rosidl_generate_interfaces(${PROJECT_NAME}
 	${msg_files}
-	${action_files}
+	${srv_files}
   DEPENDENCIES builtin_interfaces
 )
 
