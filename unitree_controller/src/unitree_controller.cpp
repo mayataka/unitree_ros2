@@ -71,7 +71,7 @@ UnitreeController::UnitreeController()
 
   base_pos_init_rt_.initRT(base_pos_init_);
   base_quat_init_rt_.initRT(base_quat_init_);
-  reset_state_estimation_rt_.initRT(false);
+  reset_state_estimation_rt_.initRT(reset_state_estimation_);
 
   request_control_mode_rt_.initRT(request_control_mode_);
   set_control_mode_rt_.initRT(set_control_mode_);
