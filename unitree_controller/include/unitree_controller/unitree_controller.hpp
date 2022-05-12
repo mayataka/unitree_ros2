@@ -103,10 +103,6 @@ public:
 
   EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
-private:
-  void read();
-  void write();
-
 protected:
   // hardware interfaces
   std::vector<std::string> joint_names_, sensor_names_;
@@ -153,6 +149,11 @@ protected:
   realtime_tools::RealtimeBuffer<ControlMode> request_control_mode_rt_;
   bool set_control_mode_;
   realtime_tools::RealtimeBuffer<bool> set_control_mode_rt_;
+
+  // gains
+  double kp_standing_up_, kd_standing_up_;
+  double kp_idling_, kd_idling_;
+  double kp_sitting_down_, kd_sitting_down_;
 
   double dt_;
   Vector19d q_est_;

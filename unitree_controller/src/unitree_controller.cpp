@@ -9,6 +9,32 @@ namespace unitree_controller
 UnitreeController::UnitreeController()
 : controller_interface::ControllerInterface(), joint_names_({}), sensor_names_({})
 {
+  linear_vel_cmd_.setZero();
+  angular_vel_cmd_.setZero();
+  linear_vel_cmd_rt_.initRT(linear_vel_cmd_);
+  angular_vel_cmd_rt_.initRT(angular_vel_cmd_);
+
+  base_pos_init_.setZero();
+  base_pos_init_rt_.initRT(base_pos_init_);
+  base_quat_init_.setIdentity();
+  base_quat_init_rt_.initRT(base_quat_init_);
+  reset_state_estimation_ = false;
+  reset_state_estimation_rt_.initRT(false);
+
+  current_control_mode_ = ControlMode::ZeroTorque;
+  previous_control_mode_ = ControlMode::ZeroTorque;
+  request_control_mode_ = ControlMode::ZeroTorque;
+  request_control_mode_rt_.initRT(request_control_mode_);
+  set_control_mode_ = false;
+  set_control_mode_rt_.initRT(set_control_mode_);
+
+  kp_standing_up_ = 0.0; 
+  kd_standing_up_ = 0.0;
+  kp_idling_ = 0.0;
+  kd_idling_ = 0.0;
+  kp_sitting_down_ = 0.0;
+  kd_sitting_down_ = 0.0;
+
   dt_ = 0;
   q_est_.setZero();
   v_est_.setZero();
@@ -58,6 +84,26 @@ void UnitreeController::auto_declare_params()
   auto_declare<std::vector<std::string>>("joints", joint_names_);
   auto_declare<std::vector<std::string>>("sensors", sensor_names_);
   auto_declare<double>("sampling_rate", 400.0);
+  auto_declare<double>("kp_standing_up", 20.0);
+  auto_declare<double>("kd_standing_up", 10.0);
+  auto_declare<double>("kp_idling", 35.0);
+  auto_declare<double>("kd_idling", 1.0);
+  auto_declare<double>("kp_sitting_down", 10.0);
+  auto_declare<double>("kd_sitting_down", 15.0);
+  auto_declare<double>("inekf_settings.contact_estimator_settings.beta0.LF", -30.0);
+  auto_declare<double>("inekf_settings.contact_estimator_settings.beta0.LH", -30.0);
+  auto_declare<double>("inekf_settings.contact_estimator_settings.beta0.RF", -30.0);
+  auto_declare<double>("inekf_settings.contact_estimator_settings.beta0.RH", -30.0);
+  auto_declare<double>("inekf_settings.contact_estimator_settings.beta1.LF", 2.0);
+  auto_declare<double>("inekf_settings.contact_estimator_settings.beta1.LH", 2.0);
+  auto_declare<double>("inekf_settings.contact_estimator_settings.beta1.RF", 2.0);
+  auto_declare<double>("inekf_settings.contact_estimator_settings.beta1.RH", 2.0);
+  auto_declare<double>("inekf_settings.contact_estimator_settings.contact_force_cov_alpha", 0.1);
+  auto_declare<double>("inekf_settings.contact_position_noise", 0.01);
+  auto_declare<double>("inekf_settings.contact_rotation_noise", 0.01);
+  auto_declare<double>("inekf_settings.lpf_lin_accel_cutoff", 250);
+  auto_declare<double>("inekf_settings.lpf_dqJ_cutoff", 10.0);
+  auto_declare<double>("inekf_settings.lpf_tauJ_cutoff", 10.0);
 }
 
 controller_interface::InterfaceConfiguration 
@@ -179,15 +225,15 @@ controller_interface::return_type UnitreeController::update()
     qJ_cmd_ = q_standing_.template tail<12>();
     dqJ_cmd_.setZero(); 
     tauJ_cmd_.setZero(); 
-    Kp_cmd_.fill(20.0);
-    Kd_cmd_.fill(10.0);
+    Kp_cmd_.fill(kp_standing_up_);
+    Kd_cmd_.fill(kd_standing_up_);
     break;
   case ControlMode::Idling:
     qJ_cmd_ = q_standing_.template tail<12>();
     dqJ_cmd_.setZero(); 
     tauJ_cmd_.setZero(); 
-    Kp_cmd_.fill(35.0);
-    Kd_cmd_.fill(1.0);
+    Kp_cmd_.fill(kp_idling_);
+    Kd_cmd_.fill(kd_idling_);
     break;
   case ControlMode::Control:
     // TODO: provide interface of this main control loop
@@ -196,8 +242,8 @@ controller_interface::return_type UnitreeController::update()
     qJ_cmd_ = q_sitting_down_.template tail<12>();
     dqJ_cmd_.setZero(); 
     tauJ_cmd_.setZero(); 
-    Kp_cmd_.fill(10.0);
-    Kd_cmd_.fill(15.0);
+    Kp_cmd_.fill(kp_sitting_down_);
+    Kd_cmd_.fill(kd_sitting_down_);
     break;
   default: // ControlMode::ZeroTorque
     constexpr double kPosStopF = (2.146E+9f);
@@ -243,6 +289,12 @@ UnitreeController::on_configure(const rclcpp_lifecycle::State &)
   // update parameters
   joint_names_ = node_->get_parameter("joints").as_string_array();
   sensor_names_ = node_->get_parameter("sensors").as_string_array();
+  kp_standing_up_ = node_->get_parameter("kp_standing_up").as_double();
+  kd_standing_up_ = node_->get_parameter("kd_standing_up").as_double();
+  kp_idling_ = node_->get_parameter("kp_idling").as_double();
+  kd_idling_ = node_->get_parameter("kd_idling").as_double();
+  kp_sitting_down_ = node_->get_parameter("kp_sitting_down").as_double();
+  kd_sitting_down_ = node_->get_parameter("kd_sitting_down").as_double();
 
   if (!reset())
   {
@@ -298,8 +350,29 @@ UnitreeController::on_configure(const rclcpp_lifecycle::State &)
   // init InEKF
   const std::string urdf_pkg = ament_index_cpp::get_package_share_directory("a1_description");
   const std::string urdf = urdf_pkg + "/urdf/a1.urdf";
-
   auto state_estimator_settings = inekf::StateEstimatorSettings::UnitreeA1(urdf, dt_);
+  state_estimator_settings.contact_estimator_settings.beta0 
+    = { node_->get_parameter("inekf_settings.contact_estimator_settings.beta0.LF").get_value<double>(),
+        node_->get_parameter("inekf_settings.contact_estimator_settings.beta0.LH").get_value<double>(),
+        node_->get_parameter("inekf_settings.contact_estimator_settings.beta0.RF").get_value<double>(),
+        node_->get_parameter("inekf_settings.contact_estimator_settings.beta0.RH").get_value<double>() };
+  state_estimator_settings.contact_estimator_settings.beta1 
+    = { node_->get_parameter("inekf_settings.contact_estimator_settings.beta1.LF").get_value<double>(),
+        node_->get_parameter("inekf_settings.contact_estimator_settings.beta1.LH").get_value<double>(),
+        node_->get_parameter("inekf_settings.contact_estimator_settings.beta1.RF").get_value<double>(),
+        node_->get_parameter("inekf_settings.contact_estimator_settings.beta1.RH").get_value<double>() };
+  state_estimator_settings.contact_estimator_settings.contact_force_cov_alpha
+    = node_->get_parameter("inekf_settings.contact_estimator_settings.contact_force_cov_alpha").get_value<double>();
+  state_estimator_settings.contact_position_noise 
+      = node_->get_parameter("inekf_settings.contact_position_noise").get_value<double>();
+  state_estimator_settings.contact_rotation_noise 
+      = node_->get_parameter("inekf_settings.contact_rotation_noise").get_value<double>();
+  state_estimator_settings.lpf_lin_accel_cutoff
+      = node_->get_parameter("inekf_settings.lpf_lin_accel_cutoff").get_value<double>();
+  state_estimator_settings.lpf_dqJ_cutoff
+      = node_->get_parameter("inekf_settings.lpf_dqJ_cutoff").get_value<double>();
+  state_estimator_settings.lpf_tauJ_cutoff
+      = node_->get_parameter("inekf_settings.lpf_tauJ_cutoff").get_value<double>();
   state_estimator_ = std::make_shared<inekf::StateEstimator>(state_estimator_settings);
   state_estimator_->init({0, 0, 0.318}, {0, 0, 0, 1}, Eigen::Vector3d::Zero(), 
                          Eigen::Vector3d::Zero(), Eigen::Vector3d::Zero());
