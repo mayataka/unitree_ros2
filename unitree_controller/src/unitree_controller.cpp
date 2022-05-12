@@ -7,49 +7,74 @@ namespace unitree_controller
 {
 
 UnitreeController::UnitreeController()
-: controller_interface::ControllerInterface(), joint_names_({}), sensor_names_({})
+: controller_interface::ControllerInterface(), 
+  joint_names_({}), 
+  sensor_names_({}), 
+  qJ_interface_(), 
+  dqJ_interface_(), 
+  tauJ_interface_(), 
+  imu_orientation_interface_(), 
+  imu_angular_velocity_interface_(), 
+  imu_linear_acceleration_interface_(), 
+  foot_force_sensor_interface_(),
+  state_publisher_(),
+  realtime_state_publisher_(),
+  command_subscription_(),
+  linear_vel_cmd_(Vector3d::Zero()), 
+  linear_vel_cmd_rt_(), 
+  angular_vel_cmd_(Vector3d::Zero()),
+  angular_vel_cmd_rt_(),
+  reset_state_estimation_server_(),
+  base_pos_init_(Vector3d::Zero()),
+  base_pos_init_rt_(),
+  base_quat_init_(Quaterniond::Identity()),
+  base_quat_init_rt_(),
+  reset_state_estimation_(false),
+  reset_state_estimation_rt_(),
+  current_control_mode_(ControlMode::ZeroTorque),
+  previous_control_mode_(ControlMode::ZeroTorque),
+  set_control_mode_server_(),
+  request_control_mode_(ControlMode::ZeroTorque),
+  request_control_mode_rt_(),
+  set_control_mode_(false),
+  set_control_mode_rt_(),
+  min_zero_torque_duration_(0ns), 
+  min_standing_up_duration_(0ns),
+  min_idling_duration_(0ns), 
+  min_control_duration_(0ns), 
+  min_sitting_down_duration_(0ns),
+  kp_standing_up_(0.0),
+  kd_standing_up_(0.0),
+  kp_idling_(0.0),
+  kd_idling_(0.0),
+  kp_sitting_down_(0.0),
+  kd_sitting_down_(0.0),
+  dt_(0.0),
+  q_est_(Vector19d::Zero()),
+  v_est_(Vector18d::Zero()),
+  qJ_(Vector12d::Zero()),
+  dqJ_(Vector12d::Zero()),
+  tauJ_(Vector12d::Zero()),
+  qJ_cmd_(Vector12d::Zero()),
+  dqJ_cmd_(Vector12d::Zero()),
+  tauJ_cmd_(Vector12d::Zero()),
+  Kp_cmd_(Vector12d::Zero()),
+  Kd_cmd_(Vector12d::Zero()),
+  quat_(Quaterniond::Identity()),
+  imu_ang_vel_(Vector3d::Zero()),
+  imu_lin_acc_(Vector3d::Zero()),
+  foot_force_sensor_({0., 0., 0., 0.}),
+  state_estimator_()
 {
-  linear_vel_cmd_.setZero();
-  angular_vel_cmd_.setZero();
   linear_vel_cmd_rt_.initRT(linear_vel_cmd_);
   angular_vel_cmd_rt_.initRT(angular_vel_cmd_);
 
-  base_pos_init_.setZero();
   base_pos_init_rt_.initRT(base_pos_init_);
-  base_quat_init_.setIdentity();
   base_quat_init_rt_.initRT(base_quat_init_);
-  reset_state_estimation_ = false;
   reset_state_estimation_rt_.initRT(false);
 
-  current_control_mode_ = ControlMode::ZeroTorque;
-  previous_control_mode_ = ControlMode::ZeroTorque;
-  request_control_mode_ = ControlMode::ZeroTorque;
   request_control_mode_rt_.initRT(request_control_mode_);
-  set_control_mode_ = false;
   set_control_mode_rt_.initRT(set_control_mode_);
-
-  kp_standing_up_ = 0.0; 
-  kd_standing_up_ = 0.0;
-  kp_idling_ = 0.0;
-  kd_idling_ = 0.0;
-  kp_sitting_down_ = 0.0;
-  kd_sitting_down_ = 0.0;
-
-  dt_ = 0;
-  q_est_.setZero();
-  v_est_.setZero();
-  qJ_.setZero();
-  dqJ_.setZero();
-  tauJ_.setZero();
-  qJ_cmd_.setZero();
-  dqJ_cmd_.setZero();
-  tauJ_cmd_.setZero();
-  Kp_cmd_.setZero();
-  Kd_cmd_.setZero();
-  quat_.setIdentity();
-  imu_ang_vel_.setZero();
-  imu_lin_acc_.setZero();
-  foot_force_sensor_ = {0., 0., 0., 0.};
 }
 
 controller_interface::return_type UnitreeController::init(
@@ -75,21 +100,31 @@ controller_interface::return_type UnitreeController::init(
     return ret;
   }
   auto_declare_params();
+  // last_set_control_mode_time_ = node_->now();
   return controller_interface::return_type::OK;
 }
 
 void UnitreeController::auto_declare_params()
 {
   // node parameters
+  auto_declare<double>("sampling_rate", 400.0);
+  // interfaces
   auto_declare<std::vector<std::string>>("joints", joint_names_);
   auto_declare<std::vector<std::string>>("sensors", sensor_names_);
-  auto_declare<double>("sampling_rate", 400.0);
+  // joint PD gains
   auto_declare<double>("kp_standing_up", 20.0);
   auto_declare<double>("kd_standing_up", 10.0);
   auto_declare<double>("kp_idling", 35.0);
   auto_declare<double>("kd_idling", 1.0);
   auto_declare<double>("kp_sitting_down", 10.0);
   auto_declare<double>("kd_sitting_down", 15.0);
+  // set control mode settings (in ms)
+  auto_declare<int>("min_zero_torque_duration_ms", 5000);
+  auto_declare<int>("min_standing_up_duration_ms", 5000);
+  auto_declare<int>("min_idling_duration_ms", 5000);
+  auto_declare<int>("min_control_duration_ms", 5000);
+  auto_declare<int>("min_sitting_down_duration_ms", 5000);
+  // InEKF (state estimator) settings
   auto_declare<double>("inekf_settings.contact_estimator_settings.beta0.LF", -30.0);
   auto_declare<double>("inekf_settings.contact_estimator_settings.beta0.LH", -30.0);
   auto_declare<double>("inekf_settings.contact_estimator_settings.beta0.RF", -30.0);
@@ -236,6 +271,8 @@ controller_interface::return_type UnitreeController::update()
     Kd_cmd_.fill(kd_idling_);
     break;
   case ControlMode::Control:
+    linear_vel_cmd_ = *linear_vel_cmd_rt_.readFromRT();
+    angular_vel_cmd_ = *angular_vel_cmd_rt_.readFromRT();
     // TODO: provide interface of this main control loop
     break;
   case ControlMode::SittingDown:
@@ -295,6 +332,16 @@ UnitreeController::on_configure(const rclcpp_lifecycle::State &)
   kd_idling_ = node_->get_parameter("kd_idling").as_double();
   kp_sitting_down_ = node_->get_parameter("kp_sitting_down").as_double();
   kd_sitting_down_ = node_->get_parameter("kd_sitting_down").as_double();
+  min_zero_torque_duration_ 
+      = rclcpp::Duration(std::chrono::milliseconds(node_->get_parameter("min_zero_torque_duration_ms").as_int()));
+  min_standing_up_duration_ 
+      = rclcpp::Duration(std::chrono::milliseconds(node_->get_parameter("min_standing_up_duration_ms").as_int()));
+  min_idling_duration_ 
+      = rclcpp::Duration(std::chrono::milliseconds(node_->get_parameter("min_idling_duration_ms").as_int()));
+  min_control_duration_ 
+      = rclcpp::Duration(std::chrono::milliseconds(node_->get_parameter("min_control_duration_ms").as_int()));
+  min_sitting_down_duration_ 
+      = rclcpp::Duration(std::chrono::milliseconds(node_->get_parameter("min_sitting_down_duration_ms").as_int()));
 
   if (!reset())
   {
@@ -346,6 +393,7 @@ UnitreeController::on_configure(const rclcpp_lifecycle::State &)
   request_control_mode_rt_.initRT(request_control_mode_);
   set_control_mode_ = false;
   set_control_mode_rt_.initRT(set_control_mode_);
+  // last_set_control_mode_time_ = node_->now();
 
   // init InEKF
   const std::string urdf_pkg = ament_index_cpp::get_package_share_directory("a1_description");
@@ -568,6 +616,8 @@ UnitreeController::on_activate(const rclcpp_lifecycle::State &)
   //   foot_force_sensor_[i] = foot_force_sensor_interface_[i].get().get_value();
   // }
 
+  last_set_control_mode_time_ = node_->now();
+
   return rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn::SUCCESS;
 }
 
@@ -660,37 +710,53 @@ void UnitreeController::setControlModeCallback(
   case ControlMode::StandingUp:
     if (request_control_mode == ControlMode::Idling)
     {
-      response->accept = true;
+      if ((node_->now()-last_set_control_mode_time_) >= min_standing_up_duration_) 
+      {
+        response->accept = true;
+      }
     }
     break;
   case ControlMode::Idling:
     if (request_control_mode == ControlMode::Control)
     {
-      response->accept = true;
+      if ((node_->now()-last_set_control_mode_time_) >= min_idling_duration_) 
+      {
+        response->accept = true;
+      }
     }
     break;
   case ControlMode::Control:
     if (request_control_mode == ControlMode::Idling 
         || request_control_mode == ControlMode::SittingDown)
     {
-      response->accept = true;
+      if ((node_->now()-last_set_control_mode_time_) >= min_control_duration_) 
+      {
+        response->accept = true;
+      }
     }
     break;
   case ControlMode::SittingDown:
     if (request_control_mode == ControlMode::ZeroTorque)
     {
-      response->accept = true;
+      if ((node_->now()-last_set_control_mode_time_) >= min_sitting_down_duration_) 
+      {
+        response->accept = true;
+      }
     }
     break;
   default: // ControlMode::ZeroTorque
     if (request_control_mode == ControlMode::StandingUp)
     {
-      response->accept = true;
+      if ((node_->now()-last_set_control_mode_time_) >= min_zero_torque_duration_) 
+      {
+        response->accept = true;
+      }
     }
     break;
   }
   if (response->accept) {
     request_control_mode_rt_.writeFromNonRT(request_control_mode);
+    last_set_control_mode_time_ = node_->now();
   }
   set_control_mode_rt_.writeFromNonRT(response->accept);
 }

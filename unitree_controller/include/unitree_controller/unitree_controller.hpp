@@ -149,6 +149,10 @@ protected:
   realtime_tools::RealtimeBuffer<ControlMode> request_control_mode_rt_;
   bool set_control_mode_;
   realtime_tools::RealtimeBuffer<bool> set_control_mode_rt_;
+  rclcpp::Duration min_zero_torque_duration_, min_standing_up_duration_,
+                   min_idling_duration_, min_control_duration_, 
+                   min_sitting_down_duration_;
+  rclcpp::Time last_set_control_mode_time_;
 
   // gains
   double kp_standing_up_, kd_standing_up_;

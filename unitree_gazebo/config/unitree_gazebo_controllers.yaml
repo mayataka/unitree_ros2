@@ -105,6 +105,12 @@ unitree_controller:
     kd_idling: 1.0
     kp_sitting_down: 10.0
     kd_sitting_down: 15.0
+    # set control mode settings (in ms)
+    min_zero_torque_duration_ms: 5000
+    min_standing_up_duration_ms: 5000 
+    min_idling_duration_ms: 5000 
+    min_control_duration_ms: 5000
+    min_sitting_down_duration_ms: 5000
     # InEKF (state estimator) settings
     inekf_settings:
       # contact estimator settings
