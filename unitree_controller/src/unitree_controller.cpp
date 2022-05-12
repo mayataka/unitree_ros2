@@ -568,6 +568,13 @@ void UnitreeController::resetStateEstimationCallback(
   response->accept = true;
 }
 
+void UnitreeController::velocityCommandSubscriptionCallback(
+    const geometry_msgs::msg::Twist::SharedPtr msg) 
+{
+  linear_vel_cmd_rt_.writeFromNonRT((Vector3d() << msg->linear.x, msg->linear.y, msg->linear.z).finished());
+  angular_vel_cmd_rt_.writeFromNonRT((Vector3d() << msg->angular.x, msg->angular.y, msg->angular.z).finished());
+}
+
 void UnitreeController::setControlModeCallback(
     const std::shared_ptr<unitree_msgs::srv::SetControlMode::Request> request,
     std::shared_ptr<unitree_msgs::srv::SetControlMode::Response> response)

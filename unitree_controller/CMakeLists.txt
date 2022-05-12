@@ -24,6 +24,7 @@ find_package(pluginlib REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(rclcpp_lifecycle REQUIRED)
 find_package(realtime_tools REQUIRED)
+find_package(geometry_msgs REQUIRED)
 find_package(eigen3_cmake_module REQUIRED)
 find_package(Eigen3 REQUIRED)
 find_package(pinocchio REQUIRED)
@@ -45,6 +46,7 @@ ament_target_dependencies(${PROJECT_NAME}
   rclcpp
   rclcpp_lifecycle
   realtime_tools
+  geometry_msgs
   Eigen3
   pinocchio
   inekf_vendor
@@ -113,6 +115,7 @@ ament_export_dependencies(
   rclcpp
   rclcpp_lifecycle
   realtime_tools
+  geometry_msgs
   Eigen3
   pinocchio
   inekf_vendor

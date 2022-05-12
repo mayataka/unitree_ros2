@@ -20,6 +20,7 @@
 #include "rclcpp_lifecycle/node_interfaces/lifecycle_node_interface.hpp"
 #include "realtime_tools/realtime_publisher.h"
 #include "realtime_tools/realtime_buffer.h"
+#include "geometry_msgs/msg/twist.hpp"
 
 #include "unitree_msgs/msg/state.hpp"
 #include "unitree_msgs/srv/reset_state_estimation.hpp"
@@ -124,7 +125,11 @@ protected:
   std::shared_ptr<RealtimeStatePublisher> realtime_state_publisher_;
 
   // command subscriber
-  // TODO
+  rclcpp::Subscription<geometry_msgs::msg::Twist>::SharedPtr command_subscription_;
+  void velocityCommandSubscriptionCallback(
+      const geometry_msgs::msg::Twist::SharedPtr msg);
+  Vector3d linear_vel_cmd_, angular_vel_cmd_;
+  realtime_tools::RealtimeBuffer<Vector3d> linear_vel_cmd_rt_, angular_vel_cmd_rt_;
 
   // reset state esitmation service
   rclcpp::Service<unitree_msgs::srv::ResetStateEstimation>::SharedPtr reset_state_estimation_server_;
