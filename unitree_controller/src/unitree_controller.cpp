@@ -154,6 +154,25 @@ controller_interface::return_type UnitreeController::update()
   v_est_.template tail<12>()    = state_estimator_->getJointVelocityEstimate();
 
   // control update 
+  if (previous_control_mode_ == ControlMode::StandingUp 
+        && current_control_mode_ == ControlMode::Idling) {
+    reset_state_estimation_rt_.writeFromNonRT(true);
+  }
+  reset_state_estimation_ = *reset_state_estimation_rt_.readFromRT();
+  if (reset_state_estimation_) {
+    base_pos_init_ = *base_pos_init_rt_.readFromRT();
+    base_quat_init_ = *base_quat_init_rt_.readFromRT();
+    const double ground_height = 0;
+    state_estimator_->init(base_pos_init_, base_quat_init_.coeffs(), qJ_, 
+                           ground_height);
+    reset_state_estimation_rt_.writeFromNonRT(false);
+  }
+  set_control_mode_ = *set_control_mode_rt_.readFromRT();
+  if (set_control_mode_) {
+    request_control_mode_ = *request_control_mode_rt_.readFromRT();
+    current_control_mode_ = request_control_mode_;
+    set_control_mode_rt_.writeFromNonRT(false);
+  }
   switch (current_control_mode_)
   {
   case ControlMode::StandingUp:
@@ -164,11 +183,6 @@ controller_interface::return_type UnitreeController::update()
     Kd_cmd_.fill(10.0);
     break;
   case ControlMode::Idling:
-    if (previous_control_mode_ == ControlMode::StandingUp) {
-      const double ground_height = 0.0;
-      state_estimator_->init(q_standing_.template head<3>(), 
-                             quat_.coeffs(), qJ_, ground_height);
-    }
     qJ_cmd_ = q_standing_.template tail<12>();
     dqJ_cmd_.setZero(); 
     tauJ_cmd_.setZero(); 
@@ -263,6 +277,12 @@ UnitreeController::on_configure(const rclcpp_lifecycle::State &)
   reset_state_estimation_server_ = node_->create_service<unitree_msgs::srv::ResetStateEstimation>(
     "~/reset_state_estimation", std::bind(&UnitreeController::resetStateEstimationCallback,
                                           this, std::placeholders::_1, std::placeholders::_2));
+  base_pos_init_ = Vector3d::Zero();
+  base_pos_init_rt_.initRT(base_pos_init_);
+  base_quat_init_ = Quaterniond::Identity();
+  base_quat_init_rt_.initRT(base_quat_init_);
+  reset_state_estimation_ = false;
+  reset_state_estimation_rt_.initRT(reset_state_estimation_);
 
   // init SetControlMode server
   current_control_mode_ = ControlMode::ZeroTorque;
@@ -270,6 +290,10 @@ UnitreeController::on_configure(const rclcpp_lifecycle::State &)
   set_control_mode_server_ = node_->create_service<unitree_msgs::srv::SetControlMode>(
     "~/set_control_mode", std::bind(&UnitreeController::setControlModeCallback,
                                     this, std::placeholders::_1, std::placeholders::_2));
+  request_control_mode_ = ControlMode::ZeroTorque;
+  request_control_mode_rt_.initRT(request_control_mode_);
+  set_control_mode_ = false;
+  set_control_mode_rt_.initRT(set_control_mode_);
 
   // init InEKF
   const std::string urdf_pkg = ament_index_cpp::get_package_share_directory("a1_description");
@@ -538,9 +562,9 @@ void UnitreeController::resetStateEstimationCallback(
     const std::shared_ptr<unitree_msgs::srv::ResetStateEstimation::Request> request,
     std::shared_ptr<unitree_msgs::srv::ResetStateEstimation::Response> response)
 {
-  const double ground_height = 0.0;
-  state_estimator_->init({request->pos_x, request->pos_y, 0.318}, 
-                         quat_.coeffs(), qJ_, ground_height);
+  base_pos_init_rt_.writeFromNonRT((Vector3d() << request->pos_x, request->pos_y, 0.0).finished());
+  base_quat_init_rt_.writeFromNonRT(Quaterniond::Identity());
+  reset_state_estimation_rt_.writeFromNonRT(true);
   response->accept = true;
 }
 
@@ -586,8 +610,9 @@ void UnitreeController::setControlModeCallback(
     break;
   }
   if (response->accept) {
-    current_control_mode_ = request_control_mode;
+    request_control_mode_rt_.writeFromNonRT(request_control_mode);
   }
+  set_control_mode_rt_.writeFromNonRT(response->accept);
 }
 
 }  // namespace unitree_controller

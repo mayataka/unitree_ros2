@@ -19,7 +19,7 @@
 #include "rclcpp_lifecycle/lifecycle_publisher.hpp"
 #include "rclcpp_lifecycle/node_interfaces/lifecycle_node_interface.hpp"
 #include "realtime_tools/realtime_publisher.h"
-#include "realtime_tools/realtime_server_goal_handle.h"
+#include "realtime_tools/realtime_buffer.h"
 
 #include "unitree_msgs/msg/state.hpp"
 #include "unitree_msgs/srv/reset_state_estimation.hpp"
@@ -131,6 +131,12 @@ protected:
   void resetStateEstimationCallback(
       const std::shared_ptr<unitree_msgs::srv::ResetStateEstimation::Request> request,
       std::shared_ptr<unitree_msgs::srv::ResetStateEstimation::Response> response);
+  Vector3d base_pos_init_;
+  realtime_tools::RealtimeBuffer<Vector3d> base_pos_init_rt_;
+  Quaterniond base_quat_init_;
+  realtime_tools::RealtimeBuffer<Quaterniond> base_quat_init_rt_;
+  bool reset_state_estimation_;
+  realtime_tools::RealtimeBuffer<bool> reset_state_estimation_rt_;
 
   // set control mode service
   ControlMode current_control_mode_, previous_control_mode_;
@@ -138,6 +144,10 @@ protected:
   void setControlModeCallback(
       const std::shared_ptr<unitree_msgs::srv::SetControlMode::Request> request,
       std::shared_ptr<unitree_msgs::srv::SetControlMode::Response> response);
+  ControlMode request_control_mode_;
+  realtime_tools::RealtimeBuffer<ControlMode> request_control_mode_rt_;
+  bool set_control_mode_;
+  realtime_tools::RealtimeBuffer<bool> set_control_mode_rt_;
 
   double dt_;
   Vector19d q_est_;
