@@ -49,7 +49,7 @@ public:
 
   void setJointPositionTask(const Vector12d& qJ, const double weight);
 
-  void setCoMTask(const Vector3d& com_pos);
+  void setCoMTask(const Vector3d& com_pos, const double weight);
 
   void setupQP(const double t, const Vector19d& q, const Vector18d& v);
 
@@ -69,7 +69,7 @@ private:
   tsid::contacts::ContactPoint contact_LF_, contact_LH_, contact_RF_, contact_RH_;
   tsid::tasks::TaskActuationBounds task_actuation_bounds_;
   tsid::tasks::TaskJointPosVelAccBounds task_joint_bounds_;
-  tsid::trajectories::TrajectoryEuclidianConstant qJ_traj_;
+  tsid::trajectories::TrajectoryEuclidianConstant qJ_traj_, com_traj_;
   tsid::tasks::TaskJointPosture task_joint_pos_;
   tsid::tasks::TaskComEquality task_com_pos_;
   tsid::solvers::SolverHQuadProgFast qp_solver_;

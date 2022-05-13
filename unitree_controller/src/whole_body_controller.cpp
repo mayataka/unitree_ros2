@@ -25,6 +25,7 @@ WholeBodyController::WholeBodyController(const std::string& urdf_file_name,
     task_actuation_bounds_("task_actuation_bounds", robot_),
     task_joint_bounds_("task_joint_bounds", robot_, dt, false),
     qJ_traj_("qJ_traj"),
+    com_traj_("qJ_traj"),
     task_joint_pos_("task_joint_pos", robot_),
     task_com_pos_("task_com_pos", robot_),
     qp_solver_("qp-solver"),
@@ -45,6 +46,10 @@ WholeBodyController::WholeBodyController(const std::string& urdf_file_name,
   contact_LH_.useLocalFrame(false);
   contact_RF_.useLocalFrame(false);
   contact_RH_.useLocalFrame(false);
+  // id_formulaiton_.addRigidContact(contact_LF_, force_regularization_weight, 1.0e03, 1); 
+  // id_formulaiton_.addRigidContact(contact_LH_, force_regularization_weight, 1.0e03, 1); 
+  // id_formulaiton_.addRigidContact(contact_RF_, force_regularization_weight, 1.0e03, 1); 
+  // id_formulaiton_.addRigidContact(contact_RH_, force_regularization_weight, 1.0e03, 1); 
   id_formulaiton_.addRigidContact(contact_LF_, force_regularization_weight); 
   id_formulaiton_.addRigidContact(contact_LH_, force_regularization_weight); 
   id_formulaiton_.addRigidContact(contact_RF_, force_regularization_weight); 
@@ -77,9 +82,15 @@ void WholeBodyController::setJointPositionTask(const Vector12d& qJ,
 }
 
 
-void WholeBodyController::setCoMTask(const Vector3d& com) 
+void WholeBodyController::setCoMTask(const Vector3d& com, const double weight) 
 {
-  // id_formulation_.
+  const double Kp_com_task = 10.0;
+  const double Kd_com_task = 2.0 * std::sqrt(Kp_com_task);
+  com_traj_.setReference(com);
+  task_com_pos_.setReference(com_traj_(0.));
+  task_com_pos_.Kp(Vector3d::Constant(Kp_com_task));
+  task_com_pos_.Kd(Vector3d::Constant(Kd_com_task));
+  id_formulaiton_.addMotionTask(task_com_pos_, weight, 1);
 }
 
 

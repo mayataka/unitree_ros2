@@ -67,8 +67,11 @@ UnitreeController::UnitreeController()
   imu_lin_acc_(Vector3d::Zero()),
   foot_force_sensor_({0., 0., 0., 0.}),
   state_estimator_(),
+  enable_state_estimation_(false),
   whole_body_controller_()
 {
+  q_est_.coeffRef(6) = 1.0;
+
   linear_vel_cmd_rt_.initRT(linear_vel_cmd_);
   angular_vel_cmd_rt_.initRT(angular_vel_cmd_);
 
@@ -231,15 +234,13 @@ controller_interface::return_type UnitreeController::update()
     imu_lin_acc_.coeffRef(i) = imu_linear_acceleration_interface_[i].get().get_value();
   }
 
-  state_estimator_->update(imu_ang_vel_, imu_lin_acc_, qJ_, dqJ_, tauJ_);
-  q_est_.template head<3>()     = state_estimator_->getBasePositionEstimate();
-  q_est_.template segment<4>(3) = state_estimator_->getBaseQuaternionEstimate();
-  q_est_.template tail<12>()    = qJ_;
-  v_est_.template head<3>()     = state_estimator_->getBaseLinearVelocityEstimateLocal();
-  v_est_.template segment<3>(3) = imu_ang_vel_;
-  v_est_.template tail<12>()    = state_estimator_->getJointVelocityEstimate();
-
   // control update 
+  set_control_mode_ = *set_control_mode_rt_.readFromRT();
+  if (set_control_mode_) {
+    request_control_mode_ = *request_control_mode_rt_.readFromRT();
+    current_control_mode_ = request_control_mode_;
+    set_control_mode_rt_.writeFromNonRT(false);
+  }
   if (previous_control_mode_ == ControlMode::StandingUp 
         && current_control_mode_ == ControlMode::Idling) {
     reset_state_estimation_rt_.writeFromNonRT(true);
@@ -249,16 +250,23 @@ controller_interface::return_type UnitreeController::update()
     base_pos_init_ = *base_pos_init_rt_.readFromRT();
     base_quat_init_ = *base_quat_init_rt_.readFromRT();
     const double ground_height = 0;
-    state_estimator_->init(base_pos_init_, base_quat_init_.coeffs(), qJ_, 
+    state_estimator_->init(base_pos_init_, quat_.coeffs(), qJ_, 
                            ground_height);
     reset_state_estimation_rt_.writeFromNonRT(false);
+    enable_state_estimation_ = true;
   }
-  set_control_mode_ = *set_control_mode_rt_.readFromRT();
-  if (set_control_mode_) {
-    request_control_mode_ = *request_control_mode_rt_.readFromRT();
-    current_control_mode_ = request_control_mode_;
-    set_control_mode_rt_.writeFromNonRT(false);
+
+  if (enable_state_estimation_) 
+  {
+    state_estimator_->update(imu_ang_vel_, imu_lin_acc_, qJ_, dqJ_, tauJ_);
+    q_est_.template head<3>()     = state_estimator_->getBasePositionEstimate();
+    q_est_.template segment<4>(3) = state_estimator_->getBaseQuaternionEstimate();
+    q_est_.template tail<12>()    = qJ_;
+    v_est_.template head<3>()     = state_estimator_->getBaseLinearVelocityEstimateLocal();
+    v_est_.template segment<3>(3) = imu_ang_vel_;
+    v_est_.template tail<12>()    = state_estimator_->getJointVelocityEstimate();
   }
+
   switch (current_control_mode_)
   {
   case ControlMode::StandingUp:
@@ -438,9 +446,12 @@ UnitreeController::on_configure(const rclcpp_lifecycle::State &)
                          Eigen::Vector3d::Zero(), Eigen::Vector3d::Zero());
   // init whole body controller
   whole_body_controller_ = std::make_shared<WholeBodyController>(urdf, urdf_pkg, dt_);
-  const double joint_position_task_weight = 1.0;
+  const double joint_position_task_weight = 1.0e-03;
   whole_body_controller_->setJointPositionTask(q_standing_.template tail<12>(), 
                                                joint_position_task_weight);
+  const double com_task_weight = 1.0;
+  whole_body_controller_->setCoMTask(q_standing_.template head<3>(), 
+                                     com_task_weight);
   whole_body_controller_->setupQP(0., q_standing_, v_est_);
 
   return rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn::SUCCESS;
@@ -634,6 +645,7 @@ UnitreeController::on_activate(const rclcpp_lifecycle::State &)
   //   foot_force_sensor_[i] = foot_force_sensor_interface_[i].get().get_value();
   // }
 
+  enable_state_estimation_ = false;
   last_set_control_mode_time_ = node_->now();
 
   return rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn::SUCCESS;

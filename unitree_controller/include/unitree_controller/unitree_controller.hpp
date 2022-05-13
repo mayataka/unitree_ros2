@@ -181,6 +181,7 @@ protected:
                                               0.0,  1.0, -2.5).finished();
 
   std::shared_ptr<inekf::StateEstimator> state_estimator_;
+  bool enable_state_estimation_;
   std::shared_ptr<WholeBodyController> whole_body_controller_;
 
   void auto_declare_params();
