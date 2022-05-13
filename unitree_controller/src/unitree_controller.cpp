@@ -775,6 +775,7 @@ void UnitreeController::setControlModeCallback(
   if (response->accept) {
     request_control_mode_rt_.writeFromNonRT(request_control_mode);
     last_set_control_mode_time_ = node_->now();
+    response->current_control_mode = request->control_mode;
   }
   set_control_mode_rt_.writeFromNonRT(response->accept);
 }

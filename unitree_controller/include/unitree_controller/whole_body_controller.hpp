@@ -41,8 +41,8 @@ public:
 
   WholeBodyController(const std::string& urdf_file_name,
                       const std::string& pkg_dir, const double dt,
-                      const double friction_coefficient=0.6,
-                      const double min_normal_force=0.1,
+                      const double friction_coefficient=0.5,
+                      const double min_normal_force=1.0,
                       const double max_normal_force=100.0);
 
   void setContactStatus(const std::vector<bool>& is_contact_active);

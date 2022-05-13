@@ -30,9 +30,9 @@ WholeBodyController::WholeBodyController(const std::string& urdf_file_name,
     qp_solver_("qp-solver"),
     dt_(dt)
 {
-  const double force_regularization_weight = 1.0;
+  const double force_regularization_weight = 1.0e-05;
   const double Kp_contact = 10.0;
-  const double Kd_contact = 2.0 * std::sqrt(10.0);
+  const double Kd_contact = 2.0 * std::sqrt(Kp_contact);
   contact_LF_.Kp(Vector3d::Constant(Kp_contact));
   contact_LF_.Kd(Vector3d::Constant(Kd_contact));
   contact_LH_.Kp(Vector3d::Constant(Kp_contact));
@@ -41,6 +41,10 @@ WholeBodyController::WholeBodyController(const std::string& urdf_file_name,
   contact_RF_.Kd(Vector3d::Constant(Kd_contact));
   contact_RH_.Kp(Vector3d::Constant(Kp_contact));
   contact_RH_.Kd(Vector3d::Constant(Kd_contact));
+  contact_LF_.useLocalFrame(false);
+  contact_LH_.useLocalFrame(false);
+  contact_RF_.useLocalFrame(false);
+  contact_RH_.useLocalFrame(false);
   id_formulaiton_.addRigidContact(contact_LF_, force_regularization_weight); 
   id_formulaiton_.addRigidContact(contact_LH_, force_regularization_weight); 
   id_formulaiton_.addRigidContact(contact_RF_, force_regularization_weight); 
@@ -63,9 +67,12 @@ WholeBodyController::WholeBodyController(const std::string& urdf_file_name,
 void WholeBodyController::setJointPositionTask(const Vector12d& qJ, 
                                                const double weight)
 {
+  const double Kp_joint_position_task = 10.0;
+  const double Kd_joint_position_task = 2.0 * std::sqrt(Kp_joint_position_task);
   qJ_traj_.setReference(qJ);
   task_joint_pos_.setReference(qJ_traj_(0.));
-  task_joint_pos_.setReference(qJ_traj_(0.));
+  task_joint_pos_.Kp(Vector12d::Constant(Kp_joint_position_task));
+  task_joint_pos_.Kd(Vector12d::Constant(Kd_joint_position_task));
   id_formulaiton_.addMotionTask(task_joint_pos_, weight, 1);
 }
 
@@ -91,12 +98,11 @@ void WholeBodyController::solveQP(const double t, const Vector19d& q, const Vect
   contact_RF_.setReference(robot_.framePosition(pin_data_, pin_model_.getFrameId("FR_foot")));
   contact_RH_.setReference(robot_.framePosition(pin_data_, pin_model_.getFrameId("RR_foot")));
   const auto& qp_data = id_formulaiton_.computeProblemData(t, q, v);
-  qp_solver_.resize(id_formulaiton_.nVar(), id_formulaiton_.nEq(), id_formulaiton_.nIn());
   const auto& qp_solution = qp_solver_.solve(qp_data);
   tau_ = id_formulaiton_.getActuatorForces(qp_solution);
   a_ = id_formulaiton_.getAccelerations(qp_solution);
   qJ_cmd_ = q.template tail<12>() + dt_ * v.template tail<12>() 
-                                  + (dt_*dt_) * a_.template tail<12>();
+                                  + 0.5 * (dt_*dt_) * a_.template tail<12>();
   dqJ_cmd_ = v.template tail<12>() + dt_ * a_.template tail<12>();
 }
 

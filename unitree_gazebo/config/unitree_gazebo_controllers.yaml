@@ -101,7 +101,7 @@ unitree_controller:
       # - RL_foot_force_sensor
       # - RR_foot_force_sensor
     # joint PD gains
-    kp_standing_up: 50.0
+    kp_standing_up: 55.0
     kd_standing_up: 3.0
     kp_idling: 35.0
     kd_idling: 1.0
