@@ -19,6 +19,7 @@
   <depend>geometry_msgs</depend>
   <!-- <depend>pinocchio</depend> -->
   <depend>inekf_vendor</depend>
+  <depend>tsid_vendor</depend>
   <depend>unitree_msgs</depend>
 
   <buildtool_depend>eigen3_cmake_module</buildtool_depend>

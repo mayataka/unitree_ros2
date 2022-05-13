@@ -47,6 +47,8 @@ UnitreeController::UnitreeController()
   kd_standing_up_(0.0),
   kp_idling_(0.0),
   kd_idling_(0.0),
+  kp_control_(0.0),
+  kd_control_(0.0),
   kp_sitting_down_(0.0),
   kd_sitting_down_(0.0),
   dt_(0.0),
@@ -64,7 +66,8 @@ UnitreeController::UnitreeController()
   imu_ang_vel_(Vector3d::Zero()),
   imu_lin_acc_(Vector3d::Zero()),
   foot_force_sensor_({0., 0., 0., 0.}),
-  state_estimator_()
+  state_estimator_(),
+  whole_body_controller_()
 {
   linear_vel_cmd_rt_.initRT(linear_vel_cmd_);
   angular_vel_cmd_rt_.initRT(angular_vel_cmd_);
@@ -116,6 +119,8 @@ void UnitreeController::auto_declare_params()
   auto_declare<double>("kd_standing_up", 10.0);
   auto_declare<double>("kp_idling", 35.0);
   auto_declare<double>("kd_idling", 1.0);
+  auto_declare<double>("kp_control", 5.0);
+  auto_declare<double>("kd_control", 0.1);
   auto_declare<double>("kp_sitting_down", 10.0);
   auto_declare<double>("kd_sitting_down", 15.0);
   // set control mode settings (in ms)
@@ -273,7 +278,12 @@ controller_interface::return_type UnitreeController::update()
   case ControlMode::Control:
     linear_vel_cmd_ = *linear_vel_cmd_rt_.readFromRT();
     angular_vel_cmd_ = *angular_vel_cmd_rt_.readFromRT();
-    // TODO: provide interface of this main control loop
+    whole_body_controller_->solveQP(node_->now().seconds(), q_est_, v_est_);
+    tauJ_cmd_ = whole_body_controller_->tauJCmd();
+    qJ_cmd_ = whole_body_controller_->qJCmd();
+    dqJ_cmd_ = whole_body_controller_->dqJCmd();
+    Kp_cmd_.fill(kp_control_);
+    Kd_cmd_.fill(kd_control_);
     break;
   case ControlMode::SittingDown:
     qJ_cmd_ = q_sitting_down_.template tail<12>();
@@ -330,6 +340,8 @@ UnitreeController::on_configure(const rclcpp_lifecycle::State &)
   kd_standing_up_ = node_->get_parameter("kd_standing_up").as_double();
   kp_idling_ = node_->get_parameter("kp_idling").as_double();
   kd_idling_ = node_->get_parameter("kd_idling").as_double();
+  kp_control_ = node_->get_parameter("kp_control").as_double();
+  kd_control_ = node_->get_parameter("kd_control").as_double();
   kp_sitting_down_ = node_->get_parameter("kp_sitting_down").as_double();
   kd_sitting_down_ = node_->get_parameter("kd_sitting_down").as_double();
   min_zero_torque_duration_ 
@@ -424,6 +436,12 @@ UnitreeController::on_configure(const rclcpp_lifecycle::State &)
   state_estimator_ = std::make_shared<inekf::StateEstimator>(state_estimator_settings);
   state_estimator_->init({0, 0, 0.318}, {0, 0, 0, 1}, Eigen::Vector3d::Zero(), 
                          Eigen::Vector3d::Zero(), Eigen::Vector3d::Zero());
+  // init whole body controller
+  whole_body_controller_ = std::make_shared<WholeBodyController>(urdf, urdf_pkg, dt_);
+  const double joint_position_task_weight = 1.0;
+  whole_body_controller_->setJointPositionTask(q_standing_.template tail<12>(), 
+                                               joint_position_task_weight);
+  whole_body_controller_->setupQP(0., q_standing_, v_est_);
 
   return rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn::SUCCESS;
 }

@@ -30,6 +30,7 @@
 #include "Eigen/Core"
 #include "Eigen/Geometry"
 #include "inekf/state_estimator.hpp"
+#include "unitree_controller/whole_body_controller.hpp"
 
 
 namespace unitree_controller
@@ -157,6 +158,7 @@ protected:
   // gains
   double kp_standing_up_, kd_standing_up_;
   double kp_idling_, kd_idling_;
+  double kp_control_, kd_control_;
   double kp_sitting_down_, kd_sitting_down_;
 
   double dt_;
@@ -179,6 +181,7 @@ protected:
                                               0.0,  1.0, -2.5).finished();
 
   std::shared_ptr<inekf::StateEstimator> state_estimator_;
+  std::shared_ptr<WholeBodyController> whole_body_controller_;
 
   void auto_declare_params();
 
