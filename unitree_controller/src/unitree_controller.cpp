@@ -284,14 +284,23 @@ controller_interface::return_type UnitreeController::update()
     Kd_cmd_.fill(kd_idling_);
     break;
   case ControlMode::Control:
+    if (previous_control_mode_ == ControlMode::Idling) {
+      whole_body_controller_->init(q_est_);
+    }
     linear_vel_cmd_ = *linear_vel_cmd_rt_.readFromRT();
     angular_vel_cmd_ = *angular_vel_cmd_rt_.readFromRT();
-    whole_body_controller_->solveQP(node_->now().seconds(), q_est_, v_est_);
-    tauJ_cmd_ = whole_body_controller_->tauJCmd();
-    qJ_cmd_ = whole_body_controller_->qJCmd();
-    dqJ_cmd_ = whole_body_controller_->dqJCmd();
-    Kp_cmd_.fill(kp_control_);
-    Kd_cmd_.fill(kd_control_);
+    if (whole_body_controller_->solveQP(node_->now().seconds(), q_est_, v_est_)) {
+      tauJ_cmd_ = whole_body_controller_->tauJCmd();
+      qJ_cmd_ = whole_body_controller_->qJCmd();
+      dqJ_cmd_ = whole_body_controller_->dqJCmd();
+      Kp_cmd_.fill(kp_control_);
+      Kd_cmd_.fill(kd_control_);
+      RCLCPP_INFO(node_->get_logger(), "QP solver success!");
+    }
+    else {
+      RCLCPP_ERROR(node_->get_logger(), "QP solver failed!");
+      // In this case, we use the same control policy as the previous time step.
+    }
     break;
   case ControlMode::SittingDown:
     qJ_cmd_ = q_sitting_down_.template tail<12>();
@@ -446,13 +455,6 @@ UnitreeController::on_configure(const rclcpp_lifecycle::State &)
                          Eigen::Vector3d::Zero(), Eigen::Vector3d::Zero());
   // init whole body controller
   whole_body_controller_ = std::make_shared<WholeBodyController>(urdf, urdf_pkg, dt_);
-  const double joint_position_task_weight = 1.0e-03;
-  whole_body_controller_->setJointPositionTask(q_standing_.template tail<12>(), 
-                                               joint_position_task_weight);
-  const double com_task_weight = 1.0;
-  whole_body_controller_->setCoMTask(q_standing_.template head<3>(), 
-                                     com_task_weight);
-  whole_body_controller_->setupQP(0., q_standing_, v_est_);
 
   return rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn::SUCCESS;
 }
