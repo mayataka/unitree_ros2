@@ -285,14 +285,19 @@ controller_interface::return_type UnitreeController::update()
     break;
   case ControlMode::Control:
     if (previous_control_mode_ == ControlMode::Idling) {
-      whole_body_controller_->init(q_est_);
+      // whole_body_controller_->init(q_est_);
+      const bool verbose = true;
+      const auto formulation_str = whole_body_controller_->init(q_est_, Vector18d::Zero(), verbose);
+      if (formulation_str.has_value()) {
+        RCLCPP_INFO(node_->get_logger(), formulation_str.value().c_str());
+      }
     }
     linear_vel_cmd_ = *linear_vel_cmd_rt_.readFromRT();
     angular_vel_cmd_ = *angular_vel_cmd_rt_.readFromRT();
     if (whole_body_controller_->solveQP(node_->now().seconds(), q_est_, v_est_)) {
       tauJ_cmd_ = whole_body_controller_->tauJCmd();
-      qJ_cmd_ = whole_body_controller_->qJCmd();
-      dqJ_cmd_ = whole_body_controller_->dqJCmd();
+      qJ_cmd_   = whole_body_controller_->qJCmd();
+      dqJ_cmd_  = whole_body_controller_->dqJCmd();
       Kp_cmd_.fill(kp_control_);
       Kd_cmd_.fill(kd_control_);
       RCLCPP_INFO(node_->get_logger(), "QP solver success!");

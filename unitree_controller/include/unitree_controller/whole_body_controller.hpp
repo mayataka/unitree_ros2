@@ -4,6 +4,7 @@
 #include <memory>
 #include <string>
 #include <vector>
+#include <optional>
 
 #include "Eigen/Core"
 #include "Eigen/Geometry"
@@ -27,6 +28,7 @@
 #include "tsid/trajectories/trajectory-euclidian.hpp"
 #include "tsid/trajectories/trajectory-se3.hpp"
 #include "tsid/solvers/solver-HQP-eiquadprog-fast.hpp"
+#include "tsid/solvers/utils.hpp"
 
 
 namespace unitree_controller
@@ -93,7 +95,9 @@ public:
                     const Vector6d& vel_ref=Vector6d::Zero(),
                     const Vector6d& acc_ref=Vector6d::Zero());
 
-  void init(const Vector19d& q, const Vector18d& v=Vector18d::Zero());
+  std::optional<std::string> init(const Vector19d& q, 
+                                  const Vector18d& v=Vector18d::Zero(), 
+                                  const bool verbose=false);
 
   bool solveQP(const double t, const Vector19d& q, const Vector18d& v);
 

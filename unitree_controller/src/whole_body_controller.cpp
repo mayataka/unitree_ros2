@@ -192,9 +192,8 @@ void WholeBodyController::setLFFootRef(const pinocchio::SE3& pos_ref,
                                        const Vector6d& acc_ref)
 {
   LF_foot_traj_.setReference(pos_ref);
-  LF_foot_ref_ = LF_foot_traj_.computeNext();
-  LF_foot_ref_.setDerivative(vel_ref);
-  LF_foot_ref_.setSecondDerivative(acc_ref);
+  LF_foot_ref_.setValue(LF_foot_traj_.computeNext().getValue());
+  LF_foot_ref_.setDerivative(acc_ref);
   task_LF_foot_.setReference(LF_foot_ref_);
 }
 
@@ -215,7 +214,7 @@ void WholeBodyController::setLHFootRef(const pinocchio::SE3& pos_ref,
                                        const Vector6d& acc_ref)
 {
   LH_foot_traj_.setReference(pos_ref);
-  LH_foot_ref_ = LH_foot_traj_.computeNext();
+  LH_foot_ref_.setValue(LH_foot_traj_.computeNext().getValue());
   LH_foot_ref_.setDerivative(vel_ref);
   LH_foot_ref_.setSecondDerivative(acc_ref);
   task_LH_foot_.setReference(LH_foot_ref_);
@@ -238,7 +237,7 @@ void WholeBodyController::setRFFootRef(const pinocchio::SE3& pos_ref,
                                        const Vector6d& acc_ref)
 {
   RF_foot_traj_.setReference(pos_ref);
-  RF_foot_ref_ = RF_foot_traj_.computeNext();
+  RF_foot_ref_.setValue(RF_foot_traj_.computeNext().getValue());
   RF_foot_ref_.setDerivative(vel_ref);
   RF_foot_ref_.setSecondDerivative(acc_ref);
   task_RF_foot_.setReference(RF_foot_ref_);
@@ -261,16 +260,18 @@ void WholeBodyController::setRHFootRef(const pinocchio::SE3& pos_ref,
                                        const Vector6d& acc_ref)
 {
   RH_foot_traj_.setReference(pos_ref);
-  RH_foot_ref_ = RH_foot_traj_.computeNext();
+  RH_foot_ref_.setValue(RH_foot_traj_.computeNext().getValue());
   RH_foot_ref_.setDerivative(vel_ref);
   RH_foot_ref_.setSecondDerivative(acc_ref);
   task_RH_foot_.setReference(RH_foot_ref_);
 }
 
 
-void WholeBodyController::init(const Vector19d& q, const Vector18d& v) 
+std::optional<std::string> WholeBodyController::init(const Vector19d& q, 
+                                                     const Vector18d& v, 
+                                                     const bool verbose) 
 {
-  id_formulaiton_.computeProblemData(0.0, q, v);
+  const auto& qp_data = id_formulaiton_.computeProblemData(0.0, q, v);
   qp_solver_.resize(id_formulaiton_.nVar(), id_formulaiton_.nEq(), id_formulaiton_.nIn());
   setJointPostureRef(q.template tail<12>());
   pinocchio::framesForwardKinematics(pin_model_, pin_data_, q);
@@ -280,6 +281,12 @@ void WholeBodyController::init(const Vector19d& q, const Vector18d& v)
   setLHFootRef(robot_.framePosition(pin_data_, pin_model_.getFrameId("RL_foot")));
   setRFFootRef(robot_.framePosition(pin_data_, pin_model_.getFrameId("FR_foot")));
   setRHFootRef(robot_.framePosition(pin_data_, pin_model_.getFrameId("RR_foot")));
+  if (verbose) {
+    return tsid::solvers::HQPDataToString(qp_data);
+  }
+  else {
+    return {};
+  }
 }
 
 
