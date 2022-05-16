@@ -47,6 +47,8 @@ UnitreeController::UnitreeController()
   kd_standing_up_(0.0),
   kp_idling_(0.0),
   kd_idling_(0.0),
+  kp_control_(0.0),
+  kd_control_(0.0),
   kp_sitting_down_(0.0),
   kd_sitting_down_(0.0),
   dt_(0.0),
@@ -64,8 +66,12 @@ UnitreeController::UnitreeController()
   imu_ang_vel_(Vector3d::Zero()),
   imu_lin_acc_(Vector3d::Zero()),
   foot_force_sensor_({0., 0., 0., 0.}),
-  state_estimator_()
+  state_estimator_(),
+  enable_state_estimation_(false),
+  whole_body_controller_()
 {
+  q_est_.coeffRef(6) = 1.0;
+
   linear_vel_cmd_rt_.initRT(linear_vel_cmd_);
   angular_vel_cmd_rt_.initRT(angular_vel_cmd_);
 
@@ -116,6 +122,8 @@ void UnitreeController::auto_declare_params()
   auto_declare<double>("kd_standing_up", 10.0);
   auto_declare<double>("kp_idling", 35.0);
   auto_declare<double>("kd_idling", 1.0);
+  auto_declare<double>("kp_control", 5.0);
+  auto_declare<double>("kd_control", 0.1);
   auto_declare<double>("kp_sitting_down", 10.0);
   auto_declare<double>("kd_sitting_down", 15.0);
   // set control mode settings (in ms)
@@ -226,15 +234,13 @@ controller_interface::return_type UnitreeController::update()
     imu_lin_acc_.coeffRef(i) = imu_linear_acceleration_interface_[i].get().get_value();
   }
 
-  state_estimator_->update(imu_ang_vel_, imu_lin_acc_, qJ_, dqJ_, tauJ_);
-  q_est_.template head<3>()     = state_estimator_->getBasePositionEstimate();
-  q_est_.template segment<4>(3) = state_estimator_->getBaseQuaternionEstimate();
-  q_est_.template tail<12>()    = qJ_;
-  v_est_.template head<3>()     = state_estimator_->getBaseLinearVelocityEstimateLocal();
-  v_est_.template segment<3>(3) = imu_ang_vel_;
-  v_est_.template tail<12>()    = state_estimator_->getJointVelocityEstimate();
-
   // control update 
+  set_control_mode_ = *set_control_mode_rt_.readFromRT();
+  if (set_control_mode_) {
+    request_control_mode_ = *request_control_mode_rt_.readFromRT();
+    current_control_mode_ = request_control_mode_;
+    set_control_mode_rt_.writeFromNonRT(false);
+  }
   if (previous_control_mode_ == ControlMode::StandingUp 
         && current_control_mode_ == ControlMode::Idling) {
     reset_state_estimation_rt_.writeFromNonRT(true);
@@ -244,16 +250,23 @@ controller_interface::return_type UnitreeController::update()
     base_pos_init_ = *base_pos_init_rt_.readFromRT();
     base_quat_init_ = *base_quat_init_rt_.readFromRT();
     const double ground_height = 0;
-    state_estimator_->init(base_pos_init_, base_quat_init_.coeffs(), qJ_, 
+    state_estimator_->init(base_pos_init_, quat_.coeffs(), qJ_, 
                            ground_height);
     reset_state_estimation_rt_.writeFromNonRT(false);
+    enable_state_estimation_ = true;
   }
-  set_control_mode_ = *set_control_mode_rt_.readFromRT();
-  if (set_control_mode_) {
-    request_control_mode_ = *request_control_mode_rt_.readFromRT();
-    current_control_mode_ = request_control_mode_;
-    set_control_mode_rt_.writeFromNonRT(false);
+
+  if (enable_state_estimation_) 
+  {
+    state_estimator_->update(imu_ang_vel_, imu_lin_acc_, qJ_, dqJ_, tauJ_);
+    q_est_.template head<3>()     = state_estimator_->getBasePositionEstimate();
+    q_est_.template segment<4>(3) = state_estimator_->getBaseQuaternionEstimate();
+    q_est_.template tail<12>()    = qJ_;
+    v_est_.template head<3>()     = state_estimator_->getBaseLinearVelocityEstimateLocal();
+    v_est_.template segment<3>(3) = imu_ang_vel_;
+    v_est_.template tail<12>()    = state_estimator_->getJointVelocityEstimate();
   }
+
   switch (current_control_mode_)
   {
   case ControlMode::StandingUp:
@@ -271,9 +284,26 @@ controller_interface::return_type UnitreeController::update()
     Kd_cmd_.fill(kd_idling_);
     break;
   case ControlMode::Control:
+    if (previous_control_mode_ == ControlMode::Idling) {
+      const bool verbose = true;
+      const auto formulation_str = whole_body_controller_->init(q_est_, Vector18d::Zero(), verbose);
+      if (formulation_str.has_value()) {
+        RCLCPP_INFO(node_->get_logger(), formulation_str.value().c_str());
+      }
+    }
     linear_vel_cmd_ = *linear_vel_cmd_rt_.readFromRT();
     angular_vel_cmd_ = *angular_vel_cmd_rt_.readFromRT();
-    // TODO: provide interface of this main control loop
+    if (whole_body_controller_->solveQP(node_->now().seconds(), q_est_, v_est_)) {
+      tauJ_cmd_ = whole_body_controller_->tauJCmd();
+      qJ_cmd_   = whole_body_controller_->qJCmd();
+      dqJ_cmd_  = whole_body_controller_->dqJCmd();
+      Kp_cmd_.fill(kp_control_);
+      Kd_cmd_.fill(kd_control_);
+    }
+    else {
+      // In this case, we use the same control policy as the previous time step.
+      RCLCPP_ERROR(node_->get_logger(), "QP solver failed!");
+    }
     break;
   case ControlMode::SittingDown:
     qJ_cmd_ = q_sitting_down_.template tail<12>();
@@ -330,6 +360,8 @@ UnitreeController::on_configure(const rclcpp_lifecycle::State &)
   kd_standing_up_ = node_->get_parameter("kd_standing_up").as_double();
   kp_idling_ = node_->get_parameter("kp_idling").as_double();
   kd_idling_ = node_->get_parameter("kd_idling").as_double();
+  kp_control_ = node_->get_parameter("kp_control").as_double();
+  kd_control_ = node_->get_parameter("kd_control").as_double();
   kp_sitting_down_ = node_->get_parameter("kp_sitting_down").as_double();
   kd_sitting_down_ = node_->get_parameter("kd_sitting_down").as_double();
   min_zero_torque_duration_ 
@@ -424,6 +456,8 @@ UnitreeController::on_configure(const rclcpp_lifecycle::State &)
   state_estimator_ = std::make_shared<inekf::StateEstimator>(state_estimator_settings);
   state_estimator_->init({0, 0, 0.318}, {0, 0, 0, 1}, Eigen::Vector3d::Zero(), 
                          Eigen::Vector3d::Zero(), Eigen::Vector3d::Zero());
+  // init whole body controller
+  whole_body_controller_ = std::make_shared<WholeBodyController>(urdf, urdf_pkg, dt_);
 
   return rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn::SUCCESS;
 }
@@ -616,6 +650,7 @@ UnitreeController::on_activate(const rclcpp_lifecycle::State &)
   //   foot_force_sensor_[i] = foot_force_sensor_interface_[i].get().get_value();
   // }
 
+  enable_state_estimation_ = false;
   last_set_control_mode_time_ = node_->now();
 
   return rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn::SUCCESS;
@@ -757,6 +792,7 @@ void UnitreeController::setControlModeCallback(
   if (response->accept) {
     request_control_mode_rt_.writeFromNonRT(request_control_mode);
     last_set_control_mode_time_ = node_->now();
+    response->current_control_mode = request->control_mode;
   }
   set_control_mode_rt_.writeFromNonRT(response->accept);
 }
