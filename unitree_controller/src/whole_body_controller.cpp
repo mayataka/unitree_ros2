@@ -13,6 +13,7 @@ WholeBodyController::WholeBodyController(const std::string& urdf_file_name,
                                          const double max_normal_force)
   : robot_(tsid::robots::RobotWrapper(urdf_file_name, {pkg_dir}, 
                                       pinocchio::JointModelFreeFlyer())),
+    robot_data_(pinocchio::Data(robot_.model())),
     id_formulaiton_("inverse-dynamics", robot_),
     contact_LF_("contact_LF", robot_, "FL_foot", (Vector3d() << 0, 0, 1).finished(), 
                 friction_coefficient, min_normal_force, max_normal_force), 
@@ -85,40 +86,6 @@ WholeBodyController::WholeBodyController(const std::string& urdf_file_name,
   id_formulaiton_.addRigidContact(contact_LH_, force_regularization_weight, contact_weight, 0); 
   id_formulaiton_.addRigidContact(contact_RF_, force_regularization_weight, contact_weight, 0); 
   id_formulaiton_.addRigidContact(contact_RH_, force_regularization_weight, contact_weight, 0); 
-  // bounds (hard tasks)
-  task_actuation_bounds_.setBounds(-robot_.model().effortLimit.tail(12), 
-                                   robot_.model().effortLimit.tail(12));
-  task_joint_bounds_.setImposeBounds(true, true, false, false);
-  task_joint_bounds_.setPositionBounds(robot_.model().lowerPositionLimit.tail(12),
-                                       robot_.model().upperPositionLimit.tail(12));
-  task_joint_bounds_.setVelocityBounds(robot_.model().velocityLimit.tail(12));
-  id_formulaiton_.addActuationTask(task_actuation_bounds_, 1.0, 0);
-  id_formulaiton_.addMotionTask(task_joint_bounds_, 1.0, 0);
-  // refs (soft tasks)
-  // joint posture
-  const double Kp_joint_posture_task = 1.0;
-  const double Kd_joint_posture_task = 2.0 * std::sqrt(Kp_joint_posture_task);
-  const double joint_posture_task_weight = 1.0e-03;
-  task_joint_posture_.setReference(qJ_ref_);
-  task_joint_posture_.Kp(Vector12d::Constant(Kp_joint_posture_task));
-  task_joint_posture_.Kd(Vector12d::Constant(Kd_joint_posture_task));
-  id_formulaiton_.addMotionTask(task_joint_posture_, joint_posture_task_weight, 1);
-  // com
-  const double Kp_com_task = 10.0;
-  const double Kd_com_task = 2.0 * std::sqrt(Kp_com_task);
-  const double com_task_weight = 1.0;
-  task_com_.setReference(com_ref_);
-  task_com_.Kp(Vector3d::Constant(Kp_com_task));
-  task_com_.Kd(Vector3d::Constant(Kd_com_task));
-  id_formulaiton_.addMotionTask(task_com_, com_task_weight, 1);
-  // angular momentum
-  const double Kp_am_task = 10.0;
-  const double Kd_am_task = 2.0 * std::sqrt(Kp_am_task);
-  const double am_task_weight = 1.0;
-  task_am_.setReference(am_ref_);
-  task_am_.Kp((Vector3d() << Kp_am_task, Kp_am_task, 0.).finished());
-  task_am_.Kd((Vector3d() << Kd_am_task, Kd_am_task, 0.).finished());
-  id_formulaiton_.addMotionTask(task_am_, am_task_weight, 1);
   // Foot tasks
   const double Kp_foot_task = 10.0;
   const double Kd_foot_task = 2.0 * std::sqrt(Kp_foot_task);
@@ -139,9 +106,39 @@ WholeBodyController::WholeBodyController(const std::string& urdf_file_name,
   id_formulaiton_.addMotionTask(task_LH_foot_, foot_task_weight, 1);
   id_formulaiton_.addMotionTask(task_RF_foot_, foot_task_weight, 1);
   id_formulaiton_.addMotionTask(task_RH_foot_, foot_task_weight, 1);
-  pinocchio::urdf::buildModel(urdf_file_name, 
-                              pinocchio::JointModelFreeFlyer(), pin_model_);
-  pin_data_ = pinocchio::Data(pin_model_);
+  // com task
+  const double Kp_com_task = 10.0;
+  const double Kd_com_task = 2.0 * std::sqrt(Kp_com_task);
+  const double com_task_weight = 1.0;
+  task_com_.setReference(com_ref_);
+  task_com_.Kp(Vector3d::Constant(Kp_com_task));
+  task_com_.Kd(Vector3d::Constant(Kd_com_task));
+  id_formulaiton_.addMotionTask(task_com_, com_task_weight, 1);
+  // angular momentum
+  const double Kp_am_task = 10.0;
+  const double Kd_am_task = 2.0 * std::sqrt(Kp_am_task);
+  const double am_task_weight = 1.0;
+  task_am_.setReference(am_ref_);
+  task_am_.Kp((Vector3d() << Kp_am_task, Kp_am_task, 0.).finished());
+  task_am_.Kd((Vector3d() << Kd_am_task, Kd_am_task, 0.).finished());
+  id_formulaiton_.addMotionTask(task_am_, am_task_weight, 1);
+  // joint posture
+  const double Kp_joint_posture_task = 1.0;
+  const double Kd_joint_posture_task = 2.0 * std::sqrt(Kp_joint_posture_task);
+  const double joint_posture_task_weight = 1.0e-03;
+  task_joint_posture_.setReference(qJ_ref_);
+  task_joint_posture_.Kp(Vector12d::Constant(Kp_joint_posture_task));
+  task_joint_posture_.Kd(Vector12d::Constant(Kd_joint_posture_task));
+  id_formulaiton_.addMotionTask(task_joint_posture_, joint_posture_task_weight, 1);
+  // joint bounds (hard tasks)
+  task_actuation_bounds_.setBounds(-robot_.model().effortLimit.tail(12), 
+                                   robot_.model().effortLimit.tail(12));
+  id_formulaiton_.addActuationTask(task_actuation_bounds_, 1.0, 0);
+  task_joint_bounds_.setImposeBounds(true, true, false, false);
+  task_joint_bounds_.setPositionBounds(robot_.model().lowerPositionLimit.tail(12),
+                                       robot_.model().upperPositionLimit.tail(12));
+  task_joint_bounds_.setVelocityBounds(robot_.model().velocityLimit.tail(12));
+  id_formulaiton_.addMotionTask(task_joint_bounds_, 1.0, 0);
 }
 
 
@@ -149,8 +146,6 @@ void WholeBodyController::setJointPostureRef(const Vector12d& qJ,
                                              const Vector12d& dqJ,
                                              const Vector12d& ddqJ)
 {
-  // qJ_traj_.setReference(qJ);
-  // task_joint_pos_.setReference(qJ_traj_(0.));
   qJ_ref_.setValue(qJ);
   qJ_ref_.setDerivative(dqJ);
   qJ_ref_.setSecondDerivative(ddqJ);
@@ -271,16 +266,19 @@ std::optional<std::string> WholeBodyController::init(const Vector19d& q,
                                                      const Vector18d& v, 
                                                      const bool verbose) 
 {
+  setJointPostureRef(q.template tail<12>());
+  robot_.computeAllTerms(robot_data_, q, v);
+  setCoMRef(robot_data_.com[0]);
+  setLFFootRef(robot_.framePosition(robot_data_, robot_.model().getFrameId("FL_foot")));
+  setLHFootRef(robot_.framePosition(robot_data_, robot_.model().getFrameId("RL_foot")));
+  setRFFootRef(robot_.framePosition(robot_data_, robot_.model().getFrameId("FR_foot")));
+  setRHFootRef(robot_.framePosition(robot_data_, robot_.model().getFrameId("RR_foot")));
+  contact_LF_.setReference(robot_.framePosition(robot_data_, robot_.model().getFrameId("FL_foot")));
+  contact_LH_.setReference(robot_.framePosition(robot_data_, robot_.model().getFrameId("RL_foot")));
+  contact_RF_.setReference(robot_.framePosition(robot_data_, robot_.model().getFrameId("FR_foot")));
+  contact_RH_.setReference(robot_.framePosition(robot_data_, robot_.model().getFrameId("RR_foot")));
   const auto& qp_data = id_formulaiton_.computeProblemData(0.0, q, v);
   qp_solver_.resize(id_formulaiton_.nVar(), id_formulaiton_.nEq(), id_formulaiton_.nIn());
-  setJointPostureRef(q.template tail<12>());
-  pinocchio::framesForwardKinematics(pin_model_, pin_data_, q);
-  pinocchio::centerOfMass(pin_model_, pin_data_, q, false);
-  setCoMRef(pin_data_.com[0]);
-  setLFFootRef(robot_.framePosition(pin_data_, pin_model_.getFrameId("FL_foot")));
-  setLHFootRef(robot_.framePosition(pin_data_, pin_model_.getFrameId("RL_foot")));
-  setRFFootRef(robot_.framePosition(pin_data_, pin_model_.getFrameId("FR_foot")));
-  setRHFootRef(robot_.framePosition(pin_data_, pin_model_.getFrameId("RR_foot")));
   if (verbose) {
     return tsid::solvers::HQPDataToString(qp_data);
   }
@@ -292,12 +290,11 @@ std::optional<std::string> WholeBodyController::init(const Vector19d& q,
 
 bool WholeBodyController::solveQP(const double t, const Vector19d& q, const Vector18d& v) 
 {
-  // pinocchio::framesForwardKinematics(pin_model_, pin_data_, q);
-  // pinocchio::centerOfMass(pin_model_, pin_data_, q, false);
-  // contact_LF_.setReference(robot_.framePosition(pin_data_, pin_model_.getFrameId("FL_foot")));
-  // contact_LH_.setReference(robot_.framePosition(pin_data_, pin_model_.getFrameId("RL_foot")));
-  // contact_RF_.setReference(robot_.framePosition(pin_data_, pin_model_.getFrameId("FR_foot")));
-  // contact_RH_.setReference(robot_.framePosition(pin_data_, pin_model_.getFrameId("RR_foot")));
+  // robot_.computeAllterms(robot_data_, q, v);
+  // contact_LF_.setReference(robot_.framePosition(robot_data_, robot_.model().getFrameId("FL_foot")));
+  // contact_LH_.setReference(robot_.framePosition(robot_data_, robot_.model().getFrameId("RL_foot")));
+  // contact_RF_.setReference(robot_.framePosition(robot_data_, robot_.model().getFrameId("FR_foot")));
+  // contact_RH_.setReference(robot_.framePosition(robot_data_, robot_.model().getFrameId("RR_foot")));
   const auto& qp_data = id_formulaiton_.computeProblemData(t, q, v);
   const auto& qp_solution = qp_solver_.solve(qp_data);
   tau_ = id_formulaiton_.getActuatorForces(qp_solution);

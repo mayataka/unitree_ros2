@@ -51,8 +51,6 @@ public:
                       const double min_normal_force=0.0,
                       const double max_normal_force=1.0e08);
 
-  void setContactStatus(const std::vector<bool>& is_contact_active);
-
   void setJointPostureRef(const Vector12d& qJ, 
                           const Vector12d& dqJ=Vector12d::Zero(),
                           const Vector12d& ddqJ=Vector12d::Zero());
@@ -108,9 +106,8 @@ public:
   EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
 private:
-  pinocchio::Model pin_model_;
-  pinocchio::Data pin_data_;
   tsid::robots::RobotWrapper robot_;
+  pinocchio::Data robot_data_;
   tsid::InverseDynamicsFormulationAccForce id_formulaiton_;
   tsid::contacts::ContactPoint contact_LF_, contact_LH_, contact_RF_, contact_RH_;
   tsid::tasks::TaskActuationBounds task_actuation_bounds_;

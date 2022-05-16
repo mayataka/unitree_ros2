@@ -285,7 +285,6 @@ controller_interface::return_type UnitreeController::update()
     break;
   case ControlMode::Control:
     if (previous_control_mode_ == ControlMode::Idling) {
-      // whole_body_controller_->init(q_est_);
       const bool verbose = true;
       const auto formulation_str = whole_body_controller_->init(q_est_, Vector18d::Zero(), verbose);
       if (formulation_str.has_value()) {
@@ -300,11 +299,10 @@ controller_interface::return_type UnitreeController::update()
       dqJ_cmd_  = whole_body_controller_->dqJCmd();
       Kp_cmd_.fill(kp_control_);
       Kd_cmd_.fill(kd_control_);
-      RCLCPP_INFO(node_->get_logger(), "QP solver success!");
     }
     else {
-      RCLCPP_ERROR(node_->get_logger(), "QP solver failed!");
       // In this case, we use the same control policy as the previous time step.
+      RCLCPP_ERROR(node_->get_logger(), "QP solver failed!");
     }
     break;
   case ControlMode::SittingDown:
