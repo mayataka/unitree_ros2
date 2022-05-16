@@ -105,10 +105,12 @@ unitree_controller:
     kd_standing_up: 3.0
     kp_idling: 35.0
     kd_idling: 1.0
-    kp_control: 35.0
-    kd_control: 1.0
+    # kp_control: 35.0
+    # kd_control: 1.0
     # kp_control: 5.0
     # kd_control: 0.1
+    kp_control: 0.0
+    kd_control: 0.0
     kp_sitting_down: 10.0
     kd_sitting_down: 15.0
     # set control mode settings (in ms)

@@ -134,9 +134,11 @@ WholeBodyController::WholeBodyController(const std::string& urdf_file_name,
   task_actuation_bounds_.setBounds(-robot_.model().effortLimit.tail(12), 
                                    robot_.model().effortLimit.tail(12));
   id_formulaiton_.addActuationTask(task_actuation_bounds_, 1.0, 0);
-  task_joint_bounds_.setImposeBounds(true, true, false, false);
-  task_joint_bounds_.setPositionBounds(robot_.model().lowerPositionLimit.tail(12),
-                                       robot_.model().upperPositionLimit.tail(12));
+  // TODO: add joint position constraints the below does not work well
+  // task_joint_bounds_.setImposeBounds(true, true, true, false);
+  // task_joint_bounds_.setPositionBounds(robot_.model().lowerPositionLimit.tail(12),
+  //                                      robot_.model().upperPositionLimit.tail(12));
+  task_joint_bounds_.setImposeBounds(false, true, false, false);
   task_joint_bounds_.setVelocityBounds(robot_.model().velocityLimit.tail(12));
   id_formulaiton_.addMotionTask(task_joint_bounds_, 1.0, 0);
 }
