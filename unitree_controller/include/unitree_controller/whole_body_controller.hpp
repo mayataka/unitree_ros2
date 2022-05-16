@@ -93,6 +93,18 @@ public:
                     const Vector6d& vel_ref=Vector6d::Zero(),
                     const Vector6d& acc_ref=Vector6d::Zero());
 
+  void enableLFFootContact() { is_LF_foot_contact_active_ = true; }
+  void disableLFFootContact() { is_LF_foot_contact_active_ = false; }
+
+  void enableLHFootContact() { is_LH_foot_contact_active_ = true; }
+  void disableLHFootContact() { is_LH_foot_contact_active_ = false; }
+
+  void enableRFFootContact() { is_RF_foot_contact_active_ = true; }
+  void disableRFFootContact() { is_RF_foot_contact_active_ = false; }
+
+  void enableRHFootContact() { is_RH_foot_contact_active_ = true; }
+  void disableRHFootContact() { is_RH_foot_contact_active_ = false; }
+
   std::optional<std::string> init(const Vector19d& q, 
                                   const Vector18d& v=Vector18d::Zero(), 
                                   const bool verbose=false);
@@ -129,6 +141,10 @@ private:
            LH_foot_vel_ref_, LH_foot_acc_ref_,
            RF_foot_vel_ref_, RF_foot_acc_ref_,
            RH_foot_vel_ref_, RH_foot_acc_ref_;
+  bool is_LF_foot_contact_active_, is_LF_foot_contact_active_prev_,
+       is_LH_foot_contact_active_, is_LH_foot_contact_active_prev_,
+       is_RF_foot_contact_active_, is_RF_foot_contact_active_prev_,
+       is_RH_foot_contact_active_, is_RH_foot_contact_active_prev_;
   tsid::solvers::SolverHQuadProgFast qp_solver_;
   Vector12d tau_, qJ_cmd_, dqJ_cmd_;
   Vector18d a_;

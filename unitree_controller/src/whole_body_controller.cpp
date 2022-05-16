@@ -58,6 +58,14 @@ WholeBodyController::WholeBodyController(const std::string& urdf_file_name,
     RF_foot_acc_ref_(Vector6d::Zero()),
     RH_foot_vel_ref_(Vector6d::Zero()), 
     RH_foot_acc_ref_(Vector6d::Zero()),
+    is_LF_foot_contact_active_(true), 
+    is_LF_foot_contact_active_prev_(true),
+    is_LH_foot_contact_active_(true), 
+    is_LH_foot_contact_active_prev_(true),
+    is_RF_foot_contact_active_(true), 
+    is_RF_foot_contact_active_prev_(true),
+    is_RH_foot_contact_active_(true), 
+    is_RH_foot_contact_active_prev_(true),
     qp_solver_("qp-solver"),
     tau_(Vector12d::Zero()), 
     qJ_cmd_(Vector12d::Zero()), 
@@ -292,11 +300,36 @@ std::optional<std::string> WholeBodyController::init(const Vector19d& q,
 
 bool WholeBodyController::solveQP(const double t, const Vector19d& q, const Vector18d& v) 
 {
-  // robot_.computeAllterms(robot_data_, q, v);
-  // contact_LF_.setReference(robot_.framePosition(robot_data_, robot_.model().getFrameId("FL_foot")));
-  // contact_LH_.setReference(robot_.framePosition(robot_data_, robot_.model().getFrameId("RL_foot")));
-  // contact_RF_.setReference(robot_.framePosition(robot_data_, robot_.model().getFrameId("FR_foot")));
-  // contact_RH_.setReference(robot_.framePosition(robot_data_, robot_.model().getFrameId("RR_foot")));
+  const double force_regularization_weight = 1.0e-05;
+  const double contact_weight = 1.0e05;
+  if (!is_LF_foot_contact_active_prev_ && is_LF_foot_contact_active_) {
+    id_formulaiton_.addRigidContact(contact_LF_, force_regularization_weight, contact_weight, 0); 
+  }
+  else if (is_LF_foot_contact_active_prev_ && !is_LF_foot_contact_active_) {
+    id_formulaiton_.removeRigidContact("contact_LF"); 
+  }
+  if (!is_LH_foot_contact_active_prev_ && is_LH_foot_contact_active_) {
+    id_formulaiton_.addRigidContact(contact_LH_, force_regularization_weight, contact_weight, 0); 
+  }
+  else if (is_LH_foot_contact_active_prev_ && !is_LH_foot_contact_active_) {
+    id_formulaiton_.removeRigidContact("contact_LH"); 
+  }
+  if (!is_RF_foot_contact_active_prev_ && is_RF_foot_contact_active_) {
+    id_formulaiton_.addRigidContact(contact_RF_, force_regularization_weight, contact_weight, 0); 
+  }
+  else if (is_RF_foot_contact_active_prev_ && !is_RF_foot_contact_active_) {
+    id_formulaiton_.removeRigidContact("contact_RF"); 
+  }
+  if (!is_RH_foot_contact_active_prev_ && is_RH_foot_contact_active_) {
+    id_formulaiton_.addRigidContact(contact_RH_, force_regularization_weight, contact_weight, 0); 
+  }
+  else if (is_RH_foot_contact_active_prev_ && !is_RH_foot_contact_active_) {
+    id_formulaiton_.removeRigidContact("contact_RH"); 
+  }
+  is_LF_foot_contact_active_prev_ = is_LF_foot_contact_active_;
+  is_LH_foot_contact_active_prev_ = is_LH_foot_contact_active_;
+  is_RF_foot_contact_active_prev_ = is_RF_foot_contact_active_;
+  is_RH_foot_contact_active_prev_ = is_RH_foot_contact_active_;
   const auto& qp_data = id_formulaiton_.computeProblemData(t, q, v);
   const auto& qp_solution = qp_solver_.solve(qp_data);
   tau_ = id_formulaiton_.getActuatorForces(qp_solution);
