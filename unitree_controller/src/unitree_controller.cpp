@@ -293,6 +293,9 @@ controller_interface::return_type UnitreeController::update()
     }
     linear_vel_cmd_ = *linear_vel_cmd_rt_.readFromRT();
     angular_vel_cmd_ = *angular_vel_cmd_rt_.readFromRT();
+
+    // to measure CPU time
+    // { const auto qp_begin = std::chrono::high_resolution_clock::now(); 
     if (whole_body_controller_->solveQP(node_->now().seconds(), q_est_, v_est_)) {
       tauJ_cmd_ = whole_body_controller_->tauJCmd();
       qJ_cmd_   = whole_body_controller_->qJCmd();
@@ -304,6 +307,12 @@ controller_interface::return_type UnitreeController::update()
       // In this case, we use the same control policy as the previous time step.
       RCLCPP_ERROR(node_->get_logger(), "QP solver failed!");
     }
+
+    // to measure the CPU time
+    // const auto qp_end = std::chrono::high_resolution_clock::now();
+    // const auto qp_time = std::chrono::duration<double, std::milli>(qp_end - qp_begin);
+    // RCLCPP_INFO(node_->get_logger(), "QP time: %lf ms", qp_time.count()); }
+
     break;
   case ControlMode::SittingDown:
     qJ_cmd_ = q_sitting_down_.template tail<12>();
