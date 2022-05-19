@@ -1,0 +1,21 @@
+<?xml version="1.0"?>
+<package format="2">
+  <name>unitree_teleop</name>
+  <version>0.0.0</version>
+  <description>Generic keyboard teleop for twist robots.</description>
+
+  <maintainer email="sotaro.katayama@gmail.com">Sotaro Katayama</maintainer>
+
+  <license>BSD</license>
+
+  <url type="website">http://wiki.ros.org/teleop_twist_keyboard</url>
+  <author>Graylin Trevor Jay</author>
+
+  <exec_depend>geometry_msgs</exec_depend>
+  <exec_depend>unitree_msgs</exec_depend>
+  <exec_depend>rclpy</exec_depend>
+
+  <export>
+    <build_type>ament_python</build_type>
+  </export>
+</package>
