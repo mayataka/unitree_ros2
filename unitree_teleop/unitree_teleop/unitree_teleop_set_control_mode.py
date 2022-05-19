@@ -34,12 +34,6 @@ def getKey():
     termios.tcsetattr(sys.stdin, termios.TCSADRAIN, SETTINGS)
     return key
 
-def request_to_str(mode):
-    return "request mode:\t %s " % str(mode)
-
-def response_to_str(mode):
-    return "request mode:\t %s " % str(mode)
-
 
 def main(args=None):
     rclpy.init(args=args)
@@ -57,17 +51,18 @@ def main(args=None):
         key = getKey()
         if key in ['0', '1', '2', '3', '4']:
             request.control_mode = int(key)
-            print(request_to_str(request.control_mode))
+
+            print(CONSOLE_MSG)
+            node.get_logger().info('SetControlMode.request.control_mode: %s' % str(request.control_mode))
 
             future = cli.call_async(request)
             rclpy.spin_until_future_complete(node, future)
             response = future.result()
-            print(CONSOLE_MSG)
-            node.get_logger().info('SetControlMode.accept: %s' % str(response.accept))
-            node.get_logger().info('SetControlMode.current_control_mode: %s' % str(response.current_control_mode))
+
+            node.get_logger().info('SetControlMode.response.accept: %s' % str(response.accept))
+            node.get_logger().info('SetControlMode.response.current_control_mode: %s' % str(response.current_control_mode))
 
         elif key == '\x03':
-            shutdown = True
             break
 
         else:
