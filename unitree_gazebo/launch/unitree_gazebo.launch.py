@@ -1,11 +1,13 @@
+from distutils.spawn import spawn
 import os
 
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
-from launch.actions import IncludeLaunchDescription
+from launch.actions import IncludeLaunchDescription, ExecuteProcess, RegisterEventHandler, LogInfo
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import Command
 from launch_ros.actions import Node
+from launch.event_handlers import OnProcessStart, OnProcessExit
 
 
 def generate_launch_description():
@@ -15,7 +17,7 @@ def generate_launch_description():
             '/gazebo.launch.py']), 
         launch_arguments = {'pause': 'false'}.items(),
         # launch_arguments = {'pause': 'true'}.items(),
-    )    
+    )
 
     a1_description_path = os.path.join(
         get_package_share_directory('a1_description'))
@@ -74,6 +76,24 @@ def generate_launch_description():
         executable='spawner.py',
         arguments=['unitree_controller', '--controller-manager', '/controller_manager'],
     )
+    # spawn_controller = ExecuteProcess(
+    #     cmd=['ros2', 'run', 'controller_manager', 
+    #          'spawner.py', 
+    #          'unitree_controller', '--controller-manager', '/controller_manager'],
+    #     shell=True
+    # )
+    spawn_teleop = ExecuteProcess(
+        cmd=['ros2', 'launch', 'unitree_teleop', 
+             'unitree_teleop.launch.py'],
+        shell=True
+    )
+
+    # spawn_teleop = IncludeLaunchDescription(
+    #     PythonLaunchDescriptionSource([os.path.join(
+    #         get_package_share_directory('unitree_teleop'), 'launch'), 
+    #         '/unitree_teleop.launch.py']), 
+    #     # launch_arguments = {}.items(),
+    # )
 
     return LaunchDescription([
         gazebo,
@@ -85,5 +105,14 @@ def generate_launch_description():
         # spawn_FR_foot_force_sensor_broadcaster,
         # spawn_RL_foot_force_sensor_broadcaster,
         # spawn_RR_foot_force_sensor_broadcaster,
-        spawn_controller
+        spawn_controller,
+        RegisterEventHandler(
+            OnProcessExit(
+                target_action=spawn_controller,
+                on_exit=[
+                    LogInfo(msg='Spawning teleop'),
+                    spawn_teleop
+                ]
+            )
+        ),
     ])
