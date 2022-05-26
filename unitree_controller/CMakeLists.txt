@@ -29,10 +29,13 @@ find_package(eigen3_cmake_module REQUIRED)
 find_package(Eigen3 REQUIRED)
 find_package(pinocchio REQUIRED)
 find_package(inekf_vendor REQUIRED)
+find_package(srbd_mpc_vendor REQUIRED)
 find_package(tsid_vendor REQUIRED)
 find_package(unitree_msgs REQUIRED)
 
 add_library(${PROJECT_NAME} SHARED
+  # src/foot_step_planner.cpp
+  # src/mpc_grf_planner.cpp
   src/whole_body_controller.cpp
   src/unitree_controller.cpp
 )
@@ -52,6 +55,7 @@ ament_target_dependencies(${PROJECT_NAME}
   Eigen3
   pinocchio
   inekf_vendor
+  srbd_mpc_vendor
   tsid_vendor
   unitree_msgs
 )
@@ -122,6 +126,7 @@ ament_export_dependencies(
   Eigen3
   pinocchio
   inekf_vendor
+  srbd_mpc_vendor
   tsid_vendor
   unitree_msgs
 )

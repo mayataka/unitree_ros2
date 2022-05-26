@@ -465,6 +465,8 @@ UnitreeController::on_configure(const rclcpp_lifecycle::State &)
   state_estimator_ = std::make_shared<inekf::StateEstimator>(state_estimator_settings);
   state_estimator_->init({0, 0, 0.318}, {0, 0, 0, 1}, Eigen::Vector3d::Zero(), 
                          Eigen::Vector3d::Zero(), Eigen::Vector3d::Zero());
+  // init mpc
+  // mpc_planner_ = std::make_shared<MpcGrfPlanner>();
   // init whole body controller
   whole_body_controller_ = std::make_shared<WholeBodyController>(urdf, urdf_pkg, dt_);
 

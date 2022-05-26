@@ -30,6 +30,8 @@
 #include "Eigen/Core"
 #include "Eigen/Geometry"
 #include "inekf/state_estimator.hpp"
+// #include "unitree_controller/foot_step_planner.hpp"
+// #include "unitree_controller/mpc_grf_planner.hpp"
 #include "unitree_controller/whole_body_controller.hpp"
 
 
@@ -182,8 +184,8 @@ protected:
 
   std::shared_ptr<inekf::StateEstimator> state_estimator_;
   bool enable_state_estimation_;
+  // std::shared_ptr<MpcGrfPlanner> mpc_planner_;
   std::shared_ptr<WholeBodyController> whole_body_controller_;
-  
 
   void auto_declare_params();
 
