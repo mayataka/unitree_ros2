@@ -15,7 +15,7 @@ MpcGrfPlanner::MpcGrfPlanner(const std::string& urdf_file_name, const double dt,
   auto state_equation = StateEquation(dt);
   auto cost_function = CostFunction(dt, Qqq, Qvv, Quu);
   auto friction_cone = FrictionCone(friction_coefficient, min_normal_force, max_normal_force);
-  mpc_ = srbd_mpc::MPC(state_equation, cost_function, friction_cone);
+  mpc_ = srbdmpc::MPC(state_equation, cost_function, friction_cone);
 }
 
 
@@ -23,9 +23,9 @@ std::optional<std::string> MpcGrfPlanner::init(
     const double t, const Vector19d& q, const Vector18d& v, 
     const std::shared_ptr<FootStepPlanner>& foot_step_planner, 
     const bool verbose) {
-  contact_schedule_ = srbd_mpc::ContactSchedule();
-  robot_state_ = srbd_mpc::RobotState(urdf_file_name, {"FL_foot", "RL_foot", "FR_foot", "RR_foot"});
-  gait_command_  = srbd_mpc::GaitCommand();
+  contact_schedule_ = srbdmpc::ContactSchedule();
+  robot_state_ = srbdmpc::RobotState(urdf_file_name, {"FL_foot", "RL_foot", "FR_foot", "RR_foot"});
+  gait_command_  = srbdmpc::GaitCommand();
   mpc_.init(contact_schedule_);
 }
 

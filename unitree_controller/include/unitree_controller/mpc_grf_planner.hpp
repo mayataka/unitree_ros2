@@ -9,13 +9,13 @@
 
 #include "Eigen/Core"
 #include "Eigen/Geometry"
-#include "srbd_mpc/mpc.hpp"
-#include "srbd_mpc/state_equation.hpp"
-#include "srbd_mpc/cost_function.hpp"
-#include "srbd_mpc/friction_cone.hpp"
-#include "srbd_mpc/robot_state.hpp"
-#include "srbd_mpc/contact_schedule.hpp"
-#include "srbd_mpc/gait_command.hpp"
+#include "srbd-mpcmpc.hpp"
+#include "srbd-mpcstate_equation.hpp"
+#include "srbd-mpccost_function.hpp"
+#include "srbd-mpcfriction_cone.hpp"
+#include "srbd-mpcrobot_state.hpp"
+#include "srbd-mpccontact_schedule.hpp"
+#include "srbd-mpcgait_command.hpp"
 
 
 namespace unitree_controller
@@ -39,6 +39,10 @@ public:
                 const double min_normal_force=0.0, 
                 const double max_normal_force=std::numeric_limits<double>::infinity());
 
+  MpcGrfPlanner() = default;
+
+  ~MpcGrfPlanner() = default;
+
   std::optional<std::string> init(const double t, const Vector19d& q, 
                                   const Vector18d& v=Vector18d::Zero(), 
                                   const std::shared_ptr<FootStepPlanner>& foot_step_planner,
@@ -48,13 +52,11 @@ public:
                 const Vector3d& vcom_cmd, const double yaw_rate_cmd,
                 const std::shared_ptr<FootStepPlanner>& foot_step_planner);
 
-  EIGEN_MAKE_ALIGNED_OPERATOR_NEW
-
 private:
-  srbd_mpc::MPC mpc_;
-  srbd_mpc::RobotState robot_state_;
-  srbd_mpc::ContactSchedule contact_schedule_;
-  srbd_mpc::GaitCommand gait_command_;
+  srbdmpc::MPC mpc_;
+  srbdmpc::RobotState robot_state_;
+  srbdmpc::ContactSchedule contact_schedule_;
+  srbdmpc::GaitCommand gait_command_;
 };
 
 }  // namespace unitree_controller

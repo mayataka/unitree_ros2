@@ -19,7 +19,7 @@
   <depend>geometry_msgs</depend>
   <!-- <depend>pinocchio</depend> -->
   <depend>inekf_vendor</depend>
-  <depend>srbd_mpc_vendor</depend>
+  <depend>srbd-mpc_vendor</depend>
   <depend>tsid_vendor</depend>
   <depend>unitree_msgs</depend>
 
