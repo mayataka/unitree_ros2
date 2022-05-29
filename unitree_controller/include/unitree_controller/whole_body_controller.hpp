@@ -25,7 +25,6 @@
 #include "tsid/tasks/task-se3-equality.hpp"
 #include "tsid/tasks/task-com-equality.hpp"
 #include "tsid/tasks/task-angular-momentum-equality.hpp"
-#include "tsid/tasks/task-contact-force-equality.hpp"
 #include "tsid/trajectories/trajectory-euclidian.hpp"
 #include "tsid/trajectories/trajectory-se3.hpp"
 #include "tsid/solvers/solver-HQP-eiquadprog-fast.hpp"
@@ -94,13 +93,13 @@ public:
                     const Vector6d& vel_ref=Vector6d::Zero(),
                     const Vector6d& acc_ref=Vector6d::Zero());
 
-  // void setLFForceRef(const Vector3d& f_ref);
+  void setLFForceRef(const Vector3d& f_ref);
 
-  // void setLHForceRef(const Vector3d& f_ref);
+  void setLHForceRef(const Vector3d& f_ref);
 
-  // void setRFForceRef(const Vector3d& f_ref);
+  void setRFForceRef(const Vector3d& f_ref);
 
-  // void setRHForceRef(const Vector3d& f_ref);
+  void setRHForceRef(const Vector3d& f_ref);
 
   void enableLFFootContact() { is_LF_foot_contact_active_ = true; }
   void disableLFFootContact() { is_LF_foot_contact_active_ = false; }
@@ -138,16 +137,12 @@ private:
   tsid::tasks::TaskAMEquality task_am_;
   tsid::tasks::TaskSE3Equality task_LF_foot_, task_LH_foot_, 
                                task_RF_foot_, task_RH_foot_;
-  tsid::tasks::TaskContactForceEquality task_LF_force_, task_LH_force_, 
-                                        task_RF_force_, task_RH_force_;
   tsid::trajectories::TrajectoryEuclidianConstant qJ_traj_, com_traj_, am_traj_;
   tsid::trajectories::TrajectorySE3Constant LF_foot_traj_, LH_foot_traj_,
                                             RF_foot_traj_, RH_foot_traj_;
   tsid::trajectories::TrajectorySample qJ_ref_, com_ref_, am_ref_,
                                        LF_foot_ref_, LH_foot_ref_,
-                                       RF_foot_ref_, RH_foot_ref_,
-                                       LF_force_ref_, LH_force_ref_,
-                                       RF_force_ref_, RH_force_ref_;
+                                       RF_foot_ref_, RH_foot_ref_;
   pinocchio::SE3 LF_foot_pos_ref_, LH_foot_pos_ref_,
                  RF_foot_pos_ref_, RH_foot_pos_ref_;
   Vector6d LF_foot_vel_ref_, LF_foot_acc_ref_,

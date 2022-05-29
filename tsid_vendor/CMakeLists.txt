@@ -27,7 +27,8 @@ if(NOT tsid_POPULATED)
   FetchContent_Populate(
     tsid
     GIT_REPOSITORY https://github.com/stack-of-tasks/tsid
-    GIT_TAG master
+    GIT_TAG devel # some implementations are only available at the devel branch
+    # GIT_TAG master
     GIT_SHALLOW TRUE
     SOURCE_DIR ${tsid_SRCDIR})
 endif()
