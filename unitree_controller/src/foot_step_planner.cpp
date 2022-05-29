@@ -1,5 +1,4 @@
-#include "srbd-mpcgait_command.hpp"
-quedrupedal gaits
+#include "unitree_controller/foot_step_planner.hpp"
 
 namespace unitree_controller
 {
@@ -18,7 +17,7 @@ void FootStepPlanner::plan(const Vector3d& pos, const Matrix3d& R, const Vector3
                            const Vector3d& v_command, const double yaw_rate_command, 
                            const bool verbose)
 {
-  
+
 }
 
 

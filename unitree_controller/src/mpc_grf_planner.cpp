@@ -34,7 +34,7 @@ bool MpcGrfPlanner::solveMPC(const double t, const Vector19d& q, const Vector18d
                              const Vector3d& vcom_cmd, const double yaw_rate_cmd,
                              const std::shared_ptr<FootStepPlanner>& foot_step_planner) {
   robot_state_.update(q, v);
-  contact_schedule_ = 
+  // contact_schedule_ = 
   gait_command_.v = v_com_cmd;
   gait_command_.yaw_rate = yaw_rate_cmd;
   mpc_.solve(robot_state_, contact_schedule_, gait_command_);

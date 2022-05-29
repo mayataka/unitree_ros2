@@ -9,13 +9,14 @@
 
 #include "Eigen/Core"
 #include "Eigen/Geometry"
-#include "srbd-mpcmpc.hpp"
-#include "srbd-mpcstate_equation.hpp"
-#include "srbd-mpccost_function.hpp"
-#include "srbd-mpcfriction_cone.hpp"
-#include "srbd-mpcrobot_state.hpp"
-#include "srbd-mpccontact_schedule.hpp"
-#include "srbd-mpcgait_command.hpp"
+
+#include "srbd-mpc/mpc.hpp"
+#include "srbd-mpc/state_equation.hpp"
+#include "srbd-mpc/cost_function.hpp"
+#include "srbd-mpc/friction_cone.hpp"
+#include "srbd-mpc/robot_state.hpp"
+#include "srbd-mpc/contact_schedule.hpp"
+#include "srbd-mpc/gait_command.hpp"
 
 
 namespace unitree_controller

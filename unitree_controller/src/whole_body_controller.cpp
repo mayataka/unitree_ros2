@@ -32,6 +32,10 @@ WholeBodyController::WholeBodyController(const std::string& urdf_file_name,
     task_LH_foot_("task_LH_foot", robot_, "RL_foot"), 
     task_RF_foot_("task_RF_foot", robot_, "FR_foot"), 
     task_RH_foot_("task_RH_foot", robot_, "RR_foot"),
+    task_LF_force_("task_LF_force", robot_, dt, contact_LF_), 
+    task_LH_force_("task_LH_force", robot_, dt, contact_LH_), 
+    task_RF_force_("task_RF_force", robot_, dt, contact_RF_), 
+    task_RH_force_("task_RH_force", robot_, dt, contact_RH_),
     qJ_traj_("qJ_traj"),
     com_traj_("com_traj"),
     am_traj_("am_traj"),
@@ -46,6 +50,10 @@ WholeBodyController::WholeBodyController(const std::string& urdf_file_name,
     LH_foot_ref_(LH_foot_traj_.computeNext()),
     RF_foot_ref_(RF_foot_traj_.computeNext()),
     RH_foot_ref_(RH_foot_traj_.computeNext()),
+    LF_force_ref_(6),
+    LH_force_ref_(6),
+    RF_force_ref_(6),
+    RH_force_ref_(6),
     LF_foot_pos_ref_(pinocchio::SE3::Identity()),
     LH_foot_pos_ref_(pinocchio::SE3::Identity()),
     RF_foot_pos_ref_(pinocchio::SE3::Identity()),
@@ -114,6 +122,27 @@ WholeBodyController::WholeBodyController(const std::string& urdf_file_name,
   id_formulaiton_.addMotionTask(task_LH_foot_, foot_task_weight, 1);
   id_formulaiton_.addMotionTask(task_RF_foot_, foot_task_weight, 1);
   id_formulaiton_.addMotionTask(task_RH_foot_, foot_task_weight, 1);
+  // contact force tasks
+  const double Kp_force_task = 10.0;
+  const double Kd_force_task = 2.0 * std::sqrt(Kp_force_task);
+  const double force_task_weight = 0.01;
+  task_LF_force_.Kp((Vector6d() << Vector3d::Constant(Kp_force_task), Vector3d::Zero()).finished());
+  task_LF_force_.Kd((Vector6d() << Vector3d::Constant(Kd_force_task), Vector3d::Zero()).finished());
+  task_LH_force_.Kp((Vector6d() << Vector3d::Constant(Kp_force_task), Vector3d::Zero()).finished());
+  task_LH_force_.Kd((Vector6d() << Vector3d::Constant(Kd_force_task), Vector3d::Zero()).finished());
+  task_RF_force_.Kp((Vector6d() << Vector3d::Constant(Kp_force_task), Vector3d::Zero()).finished());
+  task_RF_force_.Kd((Vector6d() << Vector3d::Constant(Kd_force_task), Vector3d::Zero()).finished());
+  task_RH_force_.Kp((Vector6d() << Vector3d::Constant(Kp_force_task), Vector3d::Zero()).finished());
+  task_RH_force_.Kd((Vector6d() << Vector3d::Constant(Kd_force_task), Vector3d::Zero()).finished());
+  task_LF_force_.setReference(LF_force_ref_);
+  task_LH_force_.setReference(LH_force_ref_);
+  task_RF_force_.setReference(RF_force_ref_);
+  task_RH_force_.setReference(RH_force_ref_);
+  // TaskContactForceEquality is not implemented in Tsid!
+  // id_formulaiton_.addForceTask(task_LF_force_, force_task_weight, 1);
+  // id_formulaiton_.addForceTask(task_LH_force_, force_task_weight, 1);
+  // id_formulaiton_.addForceTask(task_RF_force_, force_task_weight, 1);
+  // id_formulaiton_.addForceTask(task_RH_force_, force_task_weight, 1);
   // com task
   const double Kp_com_task = 10.0;
   const double Kd_com_task = 2.0 * std::sqrt(Kp_com_task);
@@ -270,6 +299,30 @@ void WholeBodyController::setRHFootRef(const pinocchio::SE3& pos_ref,
   RH_foot_ref_.setSecondDerivative(acc_ref);
   task_RH_foot_.setReference(RH_foot_ref_);
 }
+
+
+// void WholeBodyController::setLFForceRef(const Vector3d& f_ref) {
+//   LF_force_ref_.setValue(f_ref);
+//   task_LF_force_.setReference(LF_force_ref_);
+// }
+
+
+// void WholeBodyController::setLHForceRef(const Vector3d& f_ref) {
+//   LH_force_ref_.setValue(f_ref);
+//   task_LH_force_.setReference(LH_force_ref_);
+// }
+
+
+// void WholeBodyController::setRFForceRef(const Vector3d& f_ref) {
+//   RF_force_ref_.setValue(f_ref);
+//   task_RF_force_.setReference(RF_force_ref_);
+// }
+
+
+// void WholeBodyController::setRHForceRef(const Vector3d& f_ref) {
+//   RH_force_ref_.setValue(f_ref);
+//   task_RH_force_.setReference(RH_force_ref_);
+// }
 
 
 std::optional<std::string> WholeBodyController::init(const Vector19d& q, 

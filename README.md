@@ -11,7 +11,7 @@ A ROS2 package for unitree robots.
 ## Build and Gazebo simulation
 ```
 source /opt/ros/foxy/setup.bash
-colcon build --cmake-args -DCMAKE_BUILD_TYPE=Release
+colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=Release
 source install/setup.bash
 ros2 launch unitree_gazebo unitree_gazebo.launch.py
 ```
