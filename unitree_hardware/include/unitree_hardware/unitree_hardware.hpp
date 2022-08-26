@@ -22,9 +22,9 @@
 #include "unitree_hardware/hardware_interface_type_values.hpp"
 #include "unitree_hardware/visibility_control.h"
 
-#include "unitree_legged_sdk/unitree_legged_sdk.h"
-#include "unitree_legged_sdk/udp.h"
+#include "unitree_legged_sdk/comm.h"
 #include "unitree_legged_sdk/safety.h"
+#include "unitree_legged_sdk/udp.h"
 
 namespace unitree_hardware
 {
@@ -44,6 +44,10 @@ public:
 
   UNITREE_HARDWARE_PUBLIC
   std::vector<hardware_interface::CommandInterface> export_command_interfaces() override;
+
+  UNITREE_HARDWARE_PUBLIC
+  hardware_interface::CallbackReturn on_configure(
+    const rclcpp_lifecycle::State & previous_state) override;
 
   UNITREE_HARDWARE_PUBLIC
   hardware_interface::CallbackReturn on_activate(

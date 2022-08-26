@@ -3,6 +3,7 @@
 #include <chrono>
 #include <cmath>
 #include <limits>
+#include <thread>
 
 #include "hardware_interface/types/hardware_interface_type_values.hpp"
 #include "rclcpp/rclcpp.hpp"
@@ -305,6 +306,22 @@ UnitreeHardware::export_command_interfaces()
   return command_interfaces;
 }
 
+hardware_interface::CallbackReturn UnitreeHardware::on_configure(
+  const rclcpp_lifecycle::State & /*previous_state*/) 
+{
+  constexpr auto sleep_time = std::chrono::seconds(3);
+  while (udp_.accessible)
+  {
+    RCLCPP_INFO(
+      rclcpp::get_logger("UnitreeHardware"), "Connecting to the robot... please wait...");
+    std::this_thread::sleep_for(sleep_time);
+  }
+  RCLCPP_INFO(
+    rclcpp::get_logger("UnitreeHardware"), "Successfully connected to the robot!");
+  return hardware_interface::CallbackReturn::SUCCESS;
+}
+
+
 hardware_interface::CallbackReturn UnitreeHardware::on_activate(
   const rclcpp_lifecycle::State & /*previous_state*/) 
 {
@@ -328,11 +345,11 @@ hardware_interface::CallbackReturn UnitreeHardware::on_activate(
     }
     if (std::isnan(qJ_cmd_[i]))
     {
-      qJ_cmd_[i] = 0;
+      qJ_cmd_[i] = UNITREE_LEGGED_SDK::PosStopF;
     }
     if (std::isnan(dqJ_cmd_[i]))
     {
-      dqJ_cmd_[i] = 0;
+      dqJ_cmd_[i] = UNITREE_LEGGED_SDK::VelStopF;
     }
     if (std::isnan(tauJ_cmd_[i]))
     {
@@ -377,6 +394,7 @@ hardware_interface::CallbackReturn UnitreeHardware::on_activate(
 
   RCLCPP_INFO(
     rclcpp::get_logger("UnitreeHardware"), "System successfully started!");
+
   return hardware_interface::CallbackReturn::SUCCESS;
 }
 
