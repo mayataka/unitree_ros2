@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.5)
+cmake_minimum_required(VERSION 3.8)
 project(unitree_hardware)
 
 # Default to C99
@@ -44,14 +44,8 @@ target_include_directories(
   ${hardware_interface_INCLUDE_DIRS}
   ${pluginlib_INCLUDE_DIRS}
   ${rclcpp_INCLUDE_DIRS}
-  ${lcm_INCLUDE_DIRS}
 )
 link_directories(${PROJECT_SOURCE_DIR}/lib)
-# target_compile_options(
-#   ${PROJECT_NAME}
-#   PUBLIC 
-#   "-pthread"
-# )
 
 pluginlib_export_plugin_description_file(hardware_interface unitree_hardware.xml)
 
@@ -65,10 +59,6 @@ install(
   DESTINATION include
 )
 
-if(BUILD_TESTING)
-  find_package(ament_cmake_gtest REQUIRED)
-endif()
-
 ## exports
 ament_export_include_directories(
   include
@@ -81,4 +71,17 @@ ament_export_dependencies(
   pluginlib
   rclcpp
 )
+
+if(BUILD_TESTING)
+  find_package(ament_lint_auto REQUIRED)
+  # the following line skips the linter which checks for copyrights
+  # comment the line when a copyright and license is added to all source files
+  set(ament_cmake_copyright_FOUND TRUE)
+  # the following line skips cpplint (only works in a git repo)
+  # comment the line when this package is in a git repo and when
+  # a copyright and license is added to all source files
+  set(ament_cmake_cpplint_FOUND TRUE)
+  ament_lint_auto_find_test_dependencies()
+endif()
+
 ament_package()
