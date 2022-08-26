@@ -13,9 +13,9 @@ namespace unitree_hardware
 UnitreeHardware::UnitreeHardware()
   : hardware_interface::SystemInterface(),
     udp_(UNITREE_LEGGED_SDK::LOWLEVEL),
+    safety_(UNITREE_LEGGED_SDK::LeggedType::A1), 
     state_(UNITREE_LEGGED_SDK::LowState()),
     command_(UNITREE_LEGGED_SDK::LowCmd()),
-    safety_(UNITREE_LEGGED_SDK::LeggedType::A1), 
     qJ_(), 
     dqJ_(), 
     tauJ_(), 
@@ -69,7 +69,7 @@ hardware_interface::CallbackReturn UnitreeHardware::on_init(
   {
     RCLCPP_FATAL(
       rclcpp::get_logger("UnitreeHardware"),
-      "Number of joint is %d. 12 expected.", info_.joints.size());
+      "Number of joint is %zu. 12 expected.", info_.joints.size());
     return hardware_interface::CallbackReturn::ERROR;
   }
   for (const hardware_interface::ComponentInfo & joint : info_.joints)
@@ -79,7 +79,7 @@ hardware_interface::CallbackReturn UnitreeHardware::on_init(
     {
       RCLCPP_FATAL(
         rclcpp::get_logger("UnitreeHardware"),
-        "Joint '%s'has %d state interfaces. 3 expected.", joint.name.c_str(), joint.state_interfaces.size());
+        "Joint '%s'has %zu state interfaces. 3 expected.", joint.name.c_str(), joint.state_interfaces.size());
       return hardware_interface::CallbackReturn::ERROR;
     }
     for (const auto & state_interface : joint.state_interfaces) 
@@ -102,7 +102,7 @@ hardware_interface::CallbackReturn UnitreeHardware::on_init(
     {
       RCLCPP_FATAL(
         rclcpp::get_logger("UnitreeHardware"),
-        "Joint '%s' has %d command interfaces. 5 expected.", joint.name.c_str(), joint.command_interfaces.size());
+        "Joint '%s' has %zu command interfaces. 5 expected.", joint.name.c_str(), joint.command_interfaces.size());
       return hardware_interface::CallbackReturn::ERROR;
     }
     for (const auto & command_interface : joint.command_interfaces) 
@@ -130,7 +130,7 @@ hardware_interface::CallbackReturn UnitreeHardware::on_init(
   {
     RCLCPP_FATAL(
       rclcpp::get_logger("UnitreeHardware"),
-      "Sensor[0] (should be Imu) has %d state interfaces. 10 expected.", info_.sensors[0].state_interfaces.size());
+      "Sensor[0] (should be Imu) has %zu state interfaces. 10 expected.", info_.sensors[0].state_interfaces.size());
     return hardware_interface::CallbackReturn::ERROR;
   }
   if (!(info_.sensors[0].state_interfaces[0].name == "orientation.x"))
@@ -222,14 +222,14 @@ hardware_interface::CallbackReturn UnitreeHardware::on_init(
     {
       RCLCPP_FATAL(
         rclcpp::get_logger("UnitreeHardware"),
-        "Sensor[%d] (should be foot force sensor) has %d state interfaces. 1 expected.", i+1, info_.sensors[0].state_interfaces.size());
+        "Sensor[%zu] (should be foot force sensor) has %zu state interfaces. 1 expected.", i+1, info_.sensors[0].state_interfaces.size());
       return hardware_interface::CallbackReturn::ERROR;
     }
     if (!(info_.sensors[i+1].state_interfaces[0].name == "force.z"))
     {
       RCLCPP_FATAL(
         rclcpp::get_logger("UnitreeHardware"),
-        "Sensor[%d] (should be foot force sensor) has %s state interface. Expected force.z", 
+        "Sensor[%zu] (should be foot force sensor) has %s state interface. Expected force.z", 
         i+1, info_.sensors[i+1].state_interfaces[0].name.c_str());
       return hardware_interface::CallbackReturn::ERROR;
     }
