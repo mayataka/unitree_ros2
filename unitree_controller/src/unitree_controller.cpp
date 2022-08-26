@@ -39,6 +39,7 @@ UnitreeController::UnitreeController()
   tauJ_cmd_(Vector12d::Zero()),
   Kp_cmd_(Vector12d::Zero()),
   Kd_cmd_(Vector12d::Zero())
+  // legged_state_estimator_()
 {
   // 
 }

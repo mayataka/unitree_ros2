@@ -28,7 +28,8 @@ find_package(geometry_msgs REQUIRED)
 find_package(eigen3_cmake_module REQUIRED)
 find_package(Eigen3 REQUIRED)
 find_package(unitree_hardware REQUIRED)
-# find_package(unitree_msgs REQUIRED)
+find_package(unitree_msgs REQUIRED)
+find_package(legged_state_estimator_vendor REQUIRED)
 
 add_library(${PROJECT_NAME} SHARED
   src/unitree_controller.cpp
@@ -48,16 +49,9 @@ ament_target_dependencies(${PROJECT_NAME}
   geometry_msgs
   Eigen3
   unitree_hardware
-  # unitree_msgs
+  unitree_msgs
+  legged_state_estimator_vendor
 )
-option(OPTIMIZE_FOR_NATIVE "Enable -march=native" OFF)
-if (OPTIMIZE_FOR_NATIVE)
-  target_compile_options(
-    ${PROJECT_NAME} 
-    PUBLIC
-    -march=native
-  )
-endif()
 
 # Causes the visibility macros to use dllexport rather than dllimport,
 # which is appropriate when building the dll but not consuming it.
@@ -116,7 +110,7 @@ ament_export_dependencies(
   geometry_msgs
   Eigen3
   unitree_hardware
-  # unitree_msgs
+  unitree_msgs
 )
 
 ament_package()

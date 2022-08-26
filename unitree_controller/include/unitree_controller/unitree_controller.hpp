@@ -22,6 +22,8 @@
 #include "realtime_tools/realtime_buffer.h"
 #include "geometry_msgs/msg/twist.hpp"
 
+// #include "legged_state_estimator/legged_state_estimator.hpp"
+
 #include "Eigen/Core"
 #include "Eigen/Geometry"
 
@@ -135,6 +137,9 @@ protected:
 
   // join commands
   Vector12d qJ_cmd_, dqJ_cmd_, tauJ_cmd_, Kp_cmd_, Kd_cmd_;
+
+  // state estimator
+  // legged_state_estimator::LeggedStateEstimator legged_state_estimator_; 
 
   void auto_declare_params();
 };
