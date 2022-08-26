@@ -1,0 +1,101 @@
+controller_manager:
+  ros__parameters:
+    update_rate: 400 # Hz
+
+    joint_state_broadcaster:
+      type: joint_state_broadcaster/JointStateBroadcaster
+
+    imu_sensor_broadcaster:
+      type: imu_sensor_broadcaster/IMUSensorBroadcaster
+
+    FL_foot_force_sensor_broadcaster:
+      type: force_torque_sensor_broadcaster/ForceTorqueSensorBroadcaster
+
+    FR_foot_force_sensor_broadcaster:
+      type: force_torque_sensor_broadcaster/ForceTorqueSensorBroadcaster
+
+    RL_foot_force_sensor_broadcaster:
+      type: force_torque_sensor_broadcaster/ForceTorqueSensorBroadcaster
+
+    RR_foot_force_sensor_broadcaster:
+      type: force_torque_sensor_broadcaster/ForceTorqueSensorBroadcaster
+
+    unitree_controller:
+      type: unitree_controller/UnitreeController
+
+
+joint_state_broadcaster:
+  ros__parameters:
+    joints:
+      - FL_hip_joint 
+      - FL_thigh_joint
+      - FL_calf_joint
+      - FR_hip_joint 
+      - FR_thigh_joint
+      - FR_calf_joint
+      - RL_hip_joint 
+      - RL_thigh_joint
+      - RL_calf_joint
+      - RR_hip_joint 
+      - RR_thigh_joint
+      - RR_calf_joint
+    state_interfaces:
+      - position
+      - velocity
+      - effort
+
+imu_sensor_broadcaster:
+  ros__parameters:
+    frame_id: imu_link
+    sensor_name: imu_sensor
+
+FL_foot_force_sensor_broadcaster:
+  ros__parameters:
+    frame_id: FL_foot
+    sensor_name: FL_foot_force_sensor
+    interface_names.force.z: FL_foot_force_sensor/force.z
+
+FR_foot_force_sensor_broadcaster:
+  ros__parameters:
+    frame_id: FR_foot
+    sensor_name: FR_foot_force_sensor
+    interface_names.force.z: FR_foot_force_sensor/force.z
+
+RL_foot_force_sensor_broadcaster:
+  ros__parameters:
+    frame_id: RL_foot
+    sensor_name: RL_foot_force_sensor
+    interface_names.force.z: RL_foot_force_sensor/force.z
+
+RR_foot_force_sensor_broadcaster:
+  ros__parameters:
+    frame_id: RR_foot
+    sensor_name: RR_foot_force_sensor
+    interface_names.force.z: RR_foot_force_sensor/force.z
+
+unitree_controller:
+  ros__parameters:
+    control_rate: 400.0 # Hz
+
+    # interfaces
+    joints:
+      - FL_hip_joint 
+      - FL_thigh_joint
+      - FL_calf_joint
+      - FR_hip_joint 
+      - FR_thigh_joint
+      - FR_calf_joint
+      - RL_hip_joint 
+      - RL_thigh_joint
+      - RL_calf_joint
+      - RR_hip_joint 
+      - RR_thigh_joint
+      - RR_calf_joint
+    sensors:
+      - imu_sensor
+      - FL_foot_force_sensor
+      - FR_foot_force_sensor
+      - RL_foot_force_sensor
+      - RR_foot_force_sensor
+
+ 

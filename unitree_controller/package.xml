@@ -19,6 +19,9 @@
   <depend>geometry_msgs</depend>
   <depend>unitree_hardware</depend>
   <!-- <depend>unitree_msgs</depend> -->
+  <exec_depend>joint_state_broadcaster</exec_depend>
+  <exec_depend>imu_sensor_broadcaster</exec_depend>
+  <exec_depend>force_torque_sensor_broadcaster</exec_depend>
 
   <buildtool_depend>eigen3_cmake_module</buildtool_depend>
   <build_depend>eigen</build_depend>

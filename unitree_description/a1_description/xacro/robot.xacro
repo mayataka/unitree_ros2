@@ -149,7 +149,7 @@
             <xacro:leg_ros2_control leg_name="FR"/>
             <xacro:leg_ros2_control leg_name="RL"/>
             <xacro:leg_ros2_control leg_name="RR"/>
-            <sensor name="IMU">
+            <sensor name="imu_sensor">
                 <state_interface name="orientation.x"/>
                 <state_interface name="orientation.y"/>
                 <state_interface name="orientation.z"/>

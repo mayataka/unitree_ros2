@@ -18,7 +18,7 @@ def generate_launch_description():
     declared_arguments.append(
         DeclareLaunchArgument(
             "controllers_config_file",
-            default_value="config/a1_controller.yaml",
+            default_value="config/a1_controllers.yaml",
             description="Relative path from the config package to the YAML file with the controllers configuration .",
         )
     )

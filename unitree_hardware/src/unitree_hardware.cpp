@@ -121,7 +121,7 @@ hardware_interface::CallbackReturn UnitreeHardware::on_init(
       }
     }
   }
-
+  
   // check Imu state interfaces
   if (info_.sensors[0].state_interfaces.size() != 10)
   {
@@ -306,7 +306,8 @@ hardware_interface::CallbackReturn UnitreeHardware::on_configure(
   const rclcpp_lifecycle::State & /*previous_state*/) 
 {
   constexpr auto sleep_time = std::chrono::seconds(3);
-  while (udp_.accessible)
+  while (false) // for debug
+  // while (!udp_.accessible)
   {
     RCLCPP_INFO(
       rclcpp::get_logger("UnitreeHardware"), "Connecting to the robot... please wait...");
