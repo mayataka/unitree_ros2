@@ -1,13 +1,15 @@
 <?xml version="1.0"?>
 
 <robot name="a1_description" xmlns:xacro="http://www.ros.org/wiki/xacro">
+    <xacro:arg name="use_gazebo" default="false"/>
+    <xacro:arg name="DEBUG" default="false"/>
 
     <xacro:include filename="$(find a1_description)/xacro/const.xacro"/>
     <xacro:include filename="$(find a1_description)/xacro/materials.xacro"/>
     <xacro:include filename="$(find a1_description)/xacro/leg.xacro"/>
     <xacro:include filename="$(find a1_description)/xacro/stairs.xacro"/>
     <xacro:include filename="$(find a1_description)/xacro/gazebo.xacro"/>
-    <xacro:include filename="$(find a1_description)/xacro/ros2_control_interface.xacro"/>
+    <xacro:include filename="$(find a1_description)/xacro/ros2_control.xacro"/>
     <!-- <xacro:include filename="$(find a1_gazebo)/launch/stairs.urdf.xacro"/> -->
 
     <!-- <xacro:stairs stairs="15" xpos="0" ypos="0" zpos="0" /> -->
@@ -143,10 +145,10 @@
             <hardware>
                 <plugin>unitree_hardware/UnitreeHardware</plugin>
             </hardware>
-            <xacro:leg_ros2_control_interface leg_name="FL"/>
-            <xacro:leg_ros2_control_interface leg_name="FR"/>
-            <xacro:leg_ros2_control_interface leg_name="RL"/>
-            <xacro:leg_ros2_control_interface leg_name="RR"/>
+            <xacro:leg_ros2_control leg_name="FL"/>
+            <xacro:leg_ros2_control leg_name="FR"/>
+            <xacro:leg_ros2_control leg_name="RL"/>
+            <xacro:leg_ros2_control leg_name="RR"/>
             <sensor name="IMU">
                 <state_interface name="orientation.x"/>
                 <state_interface name="orientation.y"/>
@@ -160,15 +162,19 @@
                 <state_interface name="linear_acceleration.z"/>
             </sensor>
             <sensor name="FL_foot_force_sensor">
+                <frame_id name="FL_foot"/>
                 <state_interface name="force.z"/>
             </sensor>
             <sensor name="FR_foot_force_sensor">
+                <frame_id name="FR_foot"/>
                 <state_interface name="force.z"/>
             </sensor>
             <sensor name="RL_foot_force_sensor">
+                <frame_id name="RL_foot"/>
                 <state_interface name="force.z"/>
             </sensor>
             <sensor name="RR_foot_force_sensor">
+                <frame_id name="RR_foot"/>
                 <state_interface name="force.z"/>
             </sensor>
         </ros2_control>
@@ -180,10 +186,10 @@
                 <plugin>unitree_gazebo/UnitreeGazeboSystem</plugin>
                 <!-- <plugin>gazebo_ros2_control/GazeboSystem</plugin> -->
             </hardware>
-            <xacro:leg_ros2_control_interface leg_name="FL"/>
-            <xacro:leg_ros2_control_interface leg_name="FR"/>
-            <xacro:leg_ros2_control_interface leg_name="RL"/>
-            <xacro:leg_ros2_control_interface leg_name="RR"/>
+            <xacro:leg_ros2_control leg_name="FL"/>
+            <xacro:leg_ros2_control leg_name="FR"/>
+            <xacro:leg_ros2_control leg_name="RL"/>
+            <xacro:leg_ros2_control leg_name="RR"/>
             <sensor name="imu_sensor">
                 <frame_id name="imu_link"/>
                 <state_interface name="orientation.x"/>

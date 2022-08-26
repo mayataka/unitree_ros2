@@ -2,7 +2,7 @@
 
 <robot xmlns:xacro="http://www.ros.org/wiki/xacro">
 
-    <xacro:macro name="leg_ros2_control_interface" params="leg_name">
+    <xacro:macro name="leg_ros2_control" params="leg_name">
 
         <joint name="${leg_name}_hip_joint">
             <command_interface name="position">

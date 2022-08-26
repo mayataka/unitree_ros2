@@ -42,10 +42,6 @@ hardware_interface::CallbackReturn UnitreeHardware::on_init(
   {
     return hardware_interface::CallbackReturn::ERROR;
   }
-  udp_ = UNITREE_LEGGED_SDK::UDP(UNITREE_LEGGED_SDK::LOWLEVEL);
-  safety_ = UNITREE_LEGGED_SDK::Safety(UNITREE_LEGGED_SDK::LeggedType::A1);
-  state_ = UNITREE_LEGGED_SDK::LowState();
-  command_ = UNITREE_LEGGED_SDK::LowCmd();
   command_.levelFlag = UNITREE_LEGGED_SDK::LOWLEVEL;
   udp_.InitCmdData(command_);
   // Joint states
