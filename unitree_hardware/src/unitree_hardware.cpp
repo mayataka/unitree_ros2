@@ -321,7 +321,6 @@ hardware_interface::CallbackReturn UnitreeHardware::on_configure(
   return hardware_interface::CallbackReturn::SUCCESS;
 }
 
-
 hardware_interface::CallbackReturn UnitreeHardware::on_activate(
   const rclcpp_lifecycle::State & /*previous_state*/) 
 {

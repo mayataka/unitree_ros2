@@ -22,6 +22,13 @@ find_package(pluginlib REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(lcm REQUIRED)
 
+add_library(unitree_legged_sdk_amd64 SHARED IMPORTED)
+set_target_properties(
+  unitree_legged_sdk_amd64 
+  PROPERTIES IMPORTED_LOCATION 
+  ${PROJECT_SOURCE_DIR}/lib/libunitree_legged_sdk_amd64.so
+)
+
 # compile
 add_library(${PROJECT_NAME} SHARED
   src/unitree_hardware.cpp
@@ -36,7 +43,7 @@ target_link_libraries(
   ${pluginlib_LIBRARIES}
   ${rclcpp_LIBRARIES}
   lcm
-  ${PROJECT_SOURCE_DIR}/lib/libunitree_legged_sdk_amd64.so
+  unitree_legged_sdk_amd64
 )
 target_include_directories(
   ${PROJECT_NAME}
@@ -45,7 +52,6 @@ target_include_directories(
   ${pluginlib_INCLUDE_DIRS}
   ${rclcpp_INCLUDE_DIRS}
 )
-link_directories(${PROJECT_SOURCE_DIR}/lib)
 
 pluginlib_export_plugin_description_file(hardware_interface unitree_hardware.xml)
 
