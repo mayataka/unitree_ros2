@@ -1,3 +1,26 @@
 unitree_controller:
   ros__parameters:
-    sampling_rate: 400 # Hz
+    control_rate: 400 # Hz
+
+    # interfaces
+    joints:
+      - FL_hip_joint 
+      - FL_thigh_joint
+      - FL_calf_joint
+      - FR_hip_joint 
+      - FR_thigh_joint
+      - FR_calf_joint
+      - RL_hip_joint 
+      - RL_thigh_joint
+      - RL_calf_joint
+      - RR_hip_joint 
+      - RR_thigh_joint
+      - RR_calf_joint
+    sensors:
+      - imu_sensor
+      - FL_foot_force_sensor
+      - FR_foot_force_sensor
+      - RL_foot_force_sensor
+      - RR_foot_force_sensor
+
+     

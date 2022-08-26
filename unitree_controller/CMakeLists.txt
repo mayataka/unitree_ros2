@@ -27,13 +27,10 @@ find_package(realtime_tools REQUIRED)
 find_package(geometry_msgs REQUIRED)
 find_package(eigen3_cmake_module REQUIRED)
 find_package(Eigen3 REQUIRED)
-find_package(pinocchio REQUIRED)
-find_package(inekf_vendor REQUIRED)
-find_package(tsid_vendor REQUIRED)
-find_package(unitree_msgs REQUIRED)
+find_package(unitree_hardware REQUIRED)
+# find_package(unitree_msgs REQUIRED)
 
 add_library(${PROJECT_NAME} SHARED
-  src/whole_body_controller.cpp
   src/unitree_controller.cpp
 )
 target_include_directories(${PROJECT_NAME} PRIVATE
@@ -50,10 +47,8 @@ ament_target_dependencies(${PROJECT_NAME}
   realtime_tools
   geometry_msgs
   Eigen3
-  pinocchio
-  inekf_vendor
-  tsid_vendor
-  unitree_msgs
+  unitree_hardware
+  # unitree_msgs
 )
 option(OPTIMIZE_FOR_NATIVE "Enable -march=native" OFF)
 if (OPTIMIZE_FOR_NATIVE)
@@ -120,10 +115,8 @@ ament_export_dependencies(
   realtime_tools
   geometry_msgs
   Eigen3
-  pinocchio
-  inekf_vendor
-  tsid_vendor
-  unitree_msgs
+  unitree_hardware
+  # unitree_msgs
 )
 
 ament_package()
