@@ -46,10 +46,6 @@ public:
   std::vector<hardware_interface::CommandInterface> export_command_interfaces() override;
 
   UNITREE_HARDWARE_PUBLIC
-  hardware_interface::CallbackReturn on_configure(
-    const rclcpp_lifecycle::State & previous_state) override;
-
-  UNITREE_HARDWARE_PUBLIC
   hardware_interface::CallbackReturn on_activate(
     const rclcpp_lifecycle::State & previous_state) override;
 

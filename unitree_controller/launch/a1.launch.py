@@ -61,7 +61,7 @@ def generate_launch_description():
     declared_arguments.append(
         DeclareLaunchArgument(
             "rviz_config_package",
-            default_value="unitree_description",
+            default_value="a1_description",
             description="Package with the Rviz2\'s configuration folder. \
         Usually the argument is not set, it enables use of a custom setup.",
         )
