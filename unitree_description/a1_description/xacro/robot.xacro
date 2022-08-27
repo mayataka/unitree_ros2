@@ -143,8 +143,7 @@
     <xacro:unless value="$(arg use_gazebo)">
         <ros2_control name="a1_ros2_control_settings" type="system">
             <hardware>
-                <!-- <plugin>unitree_hardware/UnitreeHardware</plugin> -->
-                <plugin>gazebo_ros2_control/GazeboSystem</plugin>
+                <plugin>unitree_hardware/UnitreeHardware</plugin>
             </hardware>
             <xacro:leg_ros2_control leg_name="FL"/>
             <xacro:leg_ros2_control leg_name="FR"/>
@@ -185,6 +184,7 @@
         <ros2_control name="a1_ros2_control_settings" type="system">
             <hardware>
                 <plugin>unitree_gazebo/UnitreeGazeboSystem</plugin>
+                <!-- <plugin>gazebo_ros2_control/GazeboSystem</plugin> -->
             </hardware>
             <xacro:leg_ros2_control leg_name="FL"/>
             <xacro:leg_ros2_control leg_name="FR"/>

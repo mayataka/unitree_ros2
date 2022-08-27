@@ -32,6 +32,7 @@ find_package(unitree_msgs REQUIRED)
 find_package(legged_state_estimator_vendor REQUIRED)
 
 add_library(${PROJECT_NAME} SHARED
+  src/unitree_controller_interface.cpp
   src/unitree_controller.cpp
 )
 target_include_directories(${PROJECT_NAME} PRIVATE
@@ -98,6 +99,7 @@ ament_export_include_directories(
   include
 )
 ament_export_libraries(
+  unitree_controller_interface
   unitree_controller
 )
 ament_export_dependencies(eigen3_cmake_module)
