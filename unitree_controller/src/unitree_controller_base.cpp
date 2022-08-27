@@ -22,8 +22,6 @@ UnitreeControllerBase::UnitreeControllerBase()
   tauJ_cmd_interface_(), 
   Kp_cmd_interface_(), 
   Kd_cmd_interface_(),
-  update_rate_(0), 
-  update_period_(0),
   states_(),
   commands_() {}
 
@@ -31,13 +29,6 @@ controller_interface::CallbackReturn UnitreeControllerBase::on_init()
 {
   try 
   {
-    // interfaces
-    auto_declare<std::vector<std::string>>("joints", joint_names_);
-    auto_declare<std::vector<std::string>>("sensors", sensor_names_);
-    // node parameters
-    auto_declare<int>("update_rate", 400);
-
-    // parameters in the derived class
     declare_parameters();
   }
   catch (const std::exception & e) {
@@ -157,43 +148,11 @@ controller_interface::return_type UnitreeControllerBase::update(
 controller_interface::CallbackReturn
 UnitreeControllerBase::on_configure(const rclcpp_lifecycle::State & previous_state)
 {
-  const auto logger = get_node()->get_logger();
-
-  // interfaces
-  joint_names_ = get_node()->get_parameter("joints").as_string_array();
-  sensor_names_ = get_node()->get_parameter("sensors").as_string_array();
-
-  if (joint_names_.empty())
-  {
-    RCLCPP_ERROR(get_node()->get_logger(), "'joints' parameter was empty");
-    return controller_interface::CallbackReturn::ERROR;
-  }
-  if (sensor_names_.empty())
-  {
-    RCLCPP_ERROR(get_node()->get_logger(), "'sensors' parameter was empty");
-    return controller_interface::CallbackReturn::ERROR;
-  }
-
-  // node parameters
-  update_rate_  = static_cast<double>(get_node()->get_parameter("update_rate").get_value<int>());
-  RCLCPP_INFO(logger, "Controller will be updated at %.2f Hz.", update_rate_);
-  if (update_rate_ > 0.0)
-  {
-    update_period_ = 1.0 / update_rate_; // seconds
-  }
-  else
-  {
-    RCLCPP_ERROR(logger, "'update_rate' must be positive, got %lf.", update_rate_);
-    return controller_interface::CallbackReturn::ERROR;
-  }
-
-  // read parameters in the derived class
   auto ret = this->read_parameters();
   if (ret != controller_interface::CallbackReturn::SUCCESS)
   {
     return ret;
   }
-
   return controller_interface::CallbackReturn::SUCCESS;
 }
 

@@ -63,7 +63,7 @@ pluginlib_export_plugin_description_file(controller_interface unitree_controller
 
 # install
 install(
-  TARGETS unitree_controller
+  TARGETS ${PROJECT_NAME}
   RUNTIME DESTINATION bin
   ARCHIVE DESTINATION lib
   LIBRARY DESTINATION lib
@@ -98,9 +98,7 @@ endif()
 ament_export_include_directories(
   include
 )
-ament_export_libraries(
-  unitree_controller
-)
+ament_export_libraries(${PROJECT_NAME})
 ament_export_dependencies(eigen3_cmake_module)
 ament_export_dependencies(
   ament_index_cpp

@@ -102,9 +102,10 @@ protected:
     const rclcpp::Time & time, const rclcpp::Duration & period,
     const UnitreeStates & states, UnitreeCommands & commands) = 0;
 
-private:
   // hardware interfaces
   std::vector<std::string> joint_names_, sensor_names_;
+
+private:
   std::vector<std::reference_wrapper<hardware_interface::LoanedStateInterface>> 
       qJ_interface_, dqJ_interface_, tauJ_interface_, 
       imu_orientation_interface_, imu_angular_velocity_interface_, 
@@ -112,9 +113,6 @@ private:
   std::vector<std::reference_wrapper<hardware_interface::LoanedCommandInterface>> 
       qJ_cmd_interface_, dqJ_cmd_interface_, tauJ_cmd_interface_, 
       Kp_cmd_interface_, Kd_cmd_interface_;
-
-  // node parameters
-  double update_rate_, update_period_;
 
   // states and commands
   UnitreeStates states_;

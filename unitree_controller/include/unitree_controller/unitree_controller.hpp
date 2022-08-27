@@ -17,7 +17,13 @@ public:
   UNITREE_CONTROLLER_PUBLIC 
   UnitreeController();
 
-protected:
+private:
+  // // hardware interfaces
+  // std::vector<std::string> joint_names_, sensor_names_;
+
+  // node parameters
+  double update_rate_, update_period_;
+
   void declare_parameters() override;
 
   controller_interface::CallbackReturn read_parameters() override;
