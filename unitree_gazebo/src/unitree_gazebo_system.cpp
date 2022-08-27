@@ -24,12 +24,12 @@ struct MimicJoint
   double multiplier = 1.0;
 };
 
-class unitree_gazebo::UnitreeUnitreeGazeboSystemPrivate
+class unitree_gazebo::UnitreeGazeboSystemPrivate
 {
 public:
-  UnitreeUnitreeGazeboSystemPrivate() = default;
+  UnitreeGazeboSystemPrivate() = default;
 
-  ~UnitreeUnitreeGazeboSystemPrivate() = default;
+  ~UnitreeGazeboSystemPrivate() = default;
 
   /// \brief Degrees od freedom.
   size_t n_dof_;
@@ -47,7 +47,7 @@ public:
   std::vector<std::string> joint_names_;
 
   /// \brief vector with the control method defined in the URDF for each joint.
-  std::vector<UnitreeGazeboSystemInterface::ControlMethod> joint_control_methods_;
+  std::vector<gazebo_ros2_control::GazeboSystemInterface::ControlMethod> joint_control_methods_;
 
   /// \brief handles to the joints from within Gazebo
   std::vector<gazebo::physics::JointPtr> sim_joints_;
@@ -625,4 +625,4 @@ hardware_interface::return_type UnitreeGazeboSystem::write(
 
 #include "pluginlib/class_list_macros.hpp"  // NOLINT
 PLUGINLIB_EXPORT_CLASS(
-  unitree_gazebo::UnitreeUnitreeGazeboSystem, gazebo_ros2_control::UnitreeGazeboSystemInterface)
+  unitree_gazebo::UnitreeGazeboSystem, gazebo_ros2_control::GazeboSystemInterface)

@@ -23,7 +23,7 @@ class UnitreeGazeboSystemPrivate;
 // These class must inherit `gazebo_ros2_control::GazeboSystemInterface` which implements a
 // simulated `ros2_control` `hardware_interface::SystemInterface`.
 
-class UnitreeGazeboSystem : public GazeboSystemInterface
+class UnitreeGazeboSystem : public gazebo_ros2_control::GazeboSystemInterface
 {
 public:
   // Documentation Inherited
