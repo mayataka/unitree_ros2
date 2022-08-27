@@ -1,0 +1,10 @@
+<library path="unitree_gazebo_hardware_plugin">
+  <class
+    name="unitree_gazebo/UnitreeGazeboSystem"
+    type="unitree_gazebo::UnitreeGazeboSystem"
+    base_class_type="gazebo_ros2_control::GazeboSystemInterface">
+    <description>
+      UnitreeGazeboPositionJoint 
+    </description>
+  </class>
+</library>
