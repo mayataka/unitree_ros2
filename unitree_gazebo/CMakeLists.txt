@@ -41,7 +41,6 @@ ament_target_dependencies(unitree_gazebo_hardware_plugin
 link_directories(
   ${gazebo_dev_LIBRARY_DIRS}
 )
-pluginlib_export_plugin_description_file(gazebo_ros2_control unitree_gazebo_hardware_plugin.xml)
 
 install(TARGETS
   unitree_gazebo_hardware_plugin
@@ -49,9 +48,14 @@ install(TARGETS
   LIBRARY DESTINATION lib
   RUNTIME DESTINATION bin
 )
-install(DIRECTORY include/${PROJECT_NAME}/
-  DESTINATION include/${PROJECT_NAME}
+
+ament_export_include_directories(
+  include
 )
+
+ament_export_dependencies(ament_cmake)
+ament_export_dependencies(rclcpp gazebo_ros2_control)
+ament_export_libraries(unitree_gazebo_hardware_plugin)
 
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
@@ -64,9 +68,6 @@ if(BUILD_TESTING)
   ament_lint_auto_find_test_dependencies()
 endif()
 
-ament_export_include_directories(include)
-ament_export_dependencies(ament_cmake)
-ament_export_dependencies(rclcpp gazebo_ros2_control)
-ament_export_libraries(unitree_gazebo_hardware_plugin)
+pluginlib_export_plugin_description_file(gazebo_ros2_control unitree_gazebo_hardware_plugin.xml)
 
 ament_package()

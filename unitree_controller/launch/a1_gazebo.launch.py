@@ -78,7 +78,7 @@ def generate_launch_description():
     rviz_config_file = LaunchConfiguration("rviz_config_file")
 
     base_launch = IncludeLaunchDescription(
-        PythonLaunchDescriptionSource([ThisLaunchFileDir(), "/unitree.launch.py"]),
+        PythonLaunchDescriptionSource([ThisLaunchFileDir(), "/unitree_gazebo.launch.py"]),
         launch_arguments={
             "controllers_config_package": controllers_config_package,
             "controllers_config_file": controllers_config_file,

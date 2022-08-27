@@ -1,8 +1,12 @@
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument, RegisterEventHandler
+from launch.actions import DeclareLaunchArgument, RegisterEventHandler, IncludeLaunchDescription
 from launch.conditions import IfCondition
 from launch.event_handlers import OnProcessExit
 from launch.substitutions import Command, FindExecutable, LaunchConfiguration, PathJoinSubstitution
+from launch.launch_description_sources import PythonLaunchDescriptionSource
+
+from ament_index_python.packages import get_package_share_directory
+import os
 
 from launch_ros.actions import Node
 from launch_ros.substitutions import FindPackageShare
@@ -85,7 +89,7 @@ def generate_launch_description():
             ),
             " ",
             "use_gazebo:=",
-            'false',
+            'true',
             " ",
             "DEBUG:=",
             'false',
@@ -99,6 +103,21 @@ def generate_launch_description():
     )
     rviz_config_file = PathJoinSubstitution(
         [FindPackageShare(rviz_config_package), rviz_config_file]
+    )
+
+    gazebo = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource([os.path.join(
+            get_package_share_directory('gazebo_ros'), 'launch'), 
+            '/gazebo.launch.py']), 
+        launch_arguments = {'pause': 'false'}.items(),
+    )
+    spawn_entity = Node(
+        package='gazebo_ros', 
+        executable='spawn_entity.py', 
+        arguments=['-topic', 'robot_description', '-entity', 'a1', 
+                   '-x', '0', '-y', '0', '-z', '0.5'],
+                #    '-x', '0', '-y', '0', '-z', '0.5', '-unpause'],
+        output='screen',
     )
 
     control_node = Node(
@@ -151,6 +170,8 @@ def generate_launch_description():
     )
 
     nodes = [
+        gazebo,
+        spawn_entity,
         control_node,
         robot_state_pub_node,
         joint_state_broadcaster_spawner,

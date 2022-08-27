@@ -1,7 +1,7 @@
 // this is a modified version of gazebo_ros2_control (https://github.com/ros-controls/gazebo_ros2_control), which is distributed under Apache-2.0 license.
 
-#ifndef UNITREE_GAZEBO_SYSTEM__UNITREE_GAZEBO_SYSTEM_HPP_
-#define UNITREE_GAZEBO_SYSTEM__UNITREE_GAZEBO_SYSTEM_HPP_
+#ifndef UNITREE_GAZEBO__UNITREE_GAZEBO_SYSTEM_HPP_
+#define UNITREE_GAZEBO__UNITREE_GAZEBO_SYSTEM_HPP_
 
 #include <memory>
 #include <string>
@@ -79,4 +79,4 @@ private:
 
 } // namespace unitree_gazebo
 
-#endif // UNITREE_GAZEBO_SYSTEM__UNITREE_GAZEBO_SYSTEM_HPP_
+#endif // UNITREE_GAZEBO__UNITREE_GAZEBO_SYSTEM_HPP_
