@@ -6,7 +6,7 @@ if(NOT CMAKE_C_STANDARD)
   set(CMAKE_C_STANDARD 99)
 endif()
 
-# Default to C++17 to avoid segfault with -march=native
+# Default to C++17 
 if(NOT CMAKE_CXX_STANDARD)
   set(CMAKE_CXX_STANDARD 17)
 endif()
@@ -32,7 +32,7 @@ find_package(unitree_msgs REQUIRED)
 find_package(legged_state_estimator_vendor REQUIRED)
 
 add_library(${PROJECT_NAME} SHARED
-  src/unitree_controller_interface.cpp
+  src/unitree_controller_base.cpp
   src/unitree_controller.cpp
 )
 target_include_directories(${PROJECT_NAME} PRIVATE
@@ -99,7 +99,6 @@ ament_export_include_directories(
   include
 )
 ament_export_libraries(
-  unitree_controller_interface
   unitree_controller
 )
 ament_export_dependencies(eigen3_cmake_module)

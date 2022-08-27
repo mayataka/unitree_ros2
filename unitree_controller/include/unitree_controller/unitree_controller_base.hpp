@@ -1,14 +1,11 @@
-#ifndef UNITREE_CONTROLLER__UNITREE_CONTROLLER_INTERFACE_HPP_
-#define UNITREE_CONTROLLER__UNITREE_CONTROLLER_INTERFACE_HPP_
+#ifndef UNITREE_CONTROLLER__UNITREE_CONTROLLER_BASE_HPP_
+#define UNITREE_CONTROLLER__UNITREE_CONTROLLER_BASE_HPP_
 
 #include <chrono>
-#include <memory>
 #include <string>
 #include <utility>
 #include <vector>
 
-#include "controller_interface/controller_interface.hpp"
-#include "hardware_interface/types/hardware_interface_type_values.hpp"
 #include "rclcpp/node_options.hpp"
 #include "rclcpp/publisher.hpp"
 #include "rclcpp/subscription.hpp"
@@ -18,16 +15,17 @@
 #include "rclcpp/duration.hpp"
 #include "rclcpp_lifecycle/lifecycle_publisher.hpp"
 #include "rclcpp_lifecycle/node_interfaces/lifecycle_node_interface.hpp"
-#include "realtime_tools/realtime_publisher.h"
-#include "realtime_tools/realtime_buffer.h"
-#include "geometry_msgs/msg/twist.hpp"
+#include "rclcpp_lifecycle/lifecycle_node.hpp"
+#include "rclcpp_lifecycle/state.hpp"
+#include "lifecycle_msgs/msg/state.hpp"
 
-#include "Eigen/Core"
-#include "Eigen/Geometry"
+#include "controller_interface/controller_interface.hpp"
+#include "hardware_interface/types/hardware_interface_type_values.hpp"
 
 #include "unitree_legged_sdk/comm.h"
 #include "unitree_hardware/hardware_interface_type_values.hpp"
 
+#include "unitree_controller/types.hpp"
 #include "unitree_controller/visibility_control.h"
 
 
@@ -36,59 +34,11 @@ namespace unitree_controller
 
 using namespace std::chrono_literals;  // NOLINT
 
-class UnitreeControllerInterface : public controller_interface::ControllerInterface
+class UnitreeControllerBase : public controller_interface::ControllerInterface
 {
-protected:
-  using Vector19d = Eigen::Matrix<double, 19, 1>;
-  using Vector18d = Eigen::Matrix<double, 18, 1>;
-  using Vector12d = Eigen::Matrix<double, 12, 1>;
-  using Vector4d  = Eigen::Matrix<double, 4, 1>;
-  using Vector3d  = Eigen::Matrix<double, 3, 1>;
-  using Quaterniond = Eigen::Quaterniond;
-
-  virtual controller_interface::CallbackReturn on_init_impl() = 0;
-
-  virtual controller_interface::CallbackReturn on_configure_impl(
-    const rclcpp_lifecycle::State & previous_state) = 0;
-
-  virtual controller_interface::return_type update_impl(
-    const rclcpp::Time & time, const rclcpp::Duration & period) = 0;
-
-  virtual bool reset_impl() = 0;
-
-  // get the update rate (Hz)
-  double getUpdateRate() const { return update_rate_; }
-
-  // get the update period (ms)
-  double getUpdatePeriod() const { return update_period_; }
-
-  const Vector12d& getJointPositions() const { return qJ_; }
-
-  const Vector12d& getJointVelocities() const { return dqJ_; }
-
-  const Vector12d& getJointTorques() const { return tauJ_; }
-
-  const Quaterniond& getImuOrientation() const { return imu_quat_; }
-
-  const Vector3d& getImuAngularVelocity() const { return imu_ang_vel_; }
-
-  const Vector3d& getImuLinearAcceleration() const { return imu_lin_acc_; }
-
-  const Vector4d& getFootForceSensors() const { return f_; }
-
-  Vector12d& getJointPositionCommands() { return qJ_cmd_; }
-
-  Vector12d& getJointVelocityCommands() { return dqJ_cmd_; }
-
-  Vector12d& getJointTorqueCommands() { return tauJ_cmd_; }
-
-  Vector12d& getJointPositionGainCommands() { return Kp_cmd_; }
-
-  Vector12d& getJointVelocityGainCommands() { return Kd_cmd_; }
-
 public:
   UNITREE_CONTROLLER_PUBLIC 
-  UnitreeControllerInterface();
+  UnitreeControllerBase();
 
   UNITREE_CONTROLLER_PUBLIC
   controller_interface::CallbackReturn on_init() override;
@@ -127,10 +77,30 @@ public:
   controller_interface::CallbackReturn on_shutdown(
     const rclcpp_lifecycle::State & previous_state) override;
 
-  UNITREE_CONTROLLER_PUBLIC
-  bool reset();
-
   EIGEN_MAKE_ALIGNED_OPERATOR_NEW
+
+protected:
+  /**
+   * Derived controllers have to declare parameters in this method.
+   * Error handling does not have to be done. It is done in `on_init`-method of this class.
+   */
+  virtual void declare_parameters() = 0;
+
+  /**
+   * Derived controllers have to read parameters in this method and set `command_interface_types_`
+   * variable. The variable is then used to propagate the command interface configuration to
+   * controller manager. The method is called from `on_configure`-method of this class.
+   *
+   * It is expected that error handling of exceptions is done.
+   *
+   * \returns controller_interface::CallbackReturn::SUCCESS if parameters are successfully read and their values are
+   * allowed, controller_interface::CallbackReturn::ERROR otherwise.
+   */
+  virtual controller_interface::CallbackReturn read_parameters() = 0;
+
+  virtual controller_interface::return_type update(
+    const rclcpp::Time & time, const rclcpp::Duration & period,
+    const UnitreeStates & states, UnitreeCommands & commands) = 0;
 
 private:
   // hardware interfaces
@@ -143,26 +113,14 @@ private:
       qJ_cmd_interface_, dqJ_cmd_interface_, tauJ_cmd_interface_, 
       Kp_cmd_interface_, Kd_cmd_interface_;
 
-  // update rate (Hz)
-  double update_rate_;
+  // node parameters
+  double update_rate_, update_period_;
 
-  // update period (ms)
-  double update_period_;
-
-  // joint states
-  Vector12d qJ_, dqJ_, tauJ_;
-
-  // imu states
-  Quaterniond imu_quat_;
-  Vector3d imu_ang_vel_, imu_lin_acc_;
-
-  // foot force sensor states
-  Vector4d f_;
-
-  // join commands
-  Vector12d qJ_cmd_, dqJ_cmd_, tauJ_cmd_, Kp_cmd_, Kd_cmd_;
+  // states and commands
+  UnitreeStates states_;
+  UnitreeCommands commands_;
 };
 
 }  // namespace unitree_controller
 
-#endif // UNITREE_CONTROLLER__UNITREE_CONTROLLER_INTERFACE_HPP_
+#endif // UNITREE_CONTROLLER__UNITREE_CONTROLLER_BASE_HPP_

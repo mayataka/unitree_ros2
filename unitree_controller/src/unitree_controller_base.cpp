@@ -1,17 +1,12 @@
-#include "unitree_controller/unitree_controller_interface.hpp"
+#include "unitree_controller/unitree_controller_base.hpp"
 
-#include "ament_index_cpp/get_package_share_directory.hpp"
-
-#include "rclcpp_lifecycle/lifecycle_node.hpp"
-#include "rclcpp_lifecycle/state.hpp"
-#include "lifecycle_msgs/msg/state.hpp"
 #include "controller_interface/helpers.hpp"
 
 
 namespace unitree_controller
 {
 
-UnitreeControllerInterface::UnitreeControllerInterface()
+UnitreeControllerBase::UnitreeControllerBase()
 : controller_interface::ControllerInterface(), 
   joint_names_({}), 
   sensor_names_({}), 
@@ -27,47 +22,33 @@ UnitreeControllerInterface::UnitreeControllerInterface()
   tauJ_cmd_interface_(), 
   Kp_cmd_interface_(), 
   Kd_cmd_interface_(),
-  update_rate_(0),
+  update_rate_(0), 
   update_period_(0),
-  qJ_(Vector12d::Zero()),
-  dqJ_(Vector12d::Zero()),
-  tauJ_(Vector12d::Zero()),
-  imu_quat_(Quaterniond::Identity()),
-  imu_ang_vel_(Vector3d::Zero()),
-  imu_lin_acc_(Vector3d::Zero()),
-  f_(Vector4d::Zero()),
-  qJ_cmd_(Vector12d::Zero()),
-  dqJ_cmd_(Vector12d::Zero()),
-  tauJ_cmd_(Vector12d::Zero()),
-  Kp_cmd_(Vector12d::Zero()),
-  Kd_cmd_(Vector12d::Zero())
-{
-}
+  states_(),
+  commands_() {}
 
-controller_interface::CallbackReturn UnitreeControllerInterface::on_init()
+controller_interface::CallbackReturn UnitreeControllerBase::on_init()
 {
   try 
   {
-    // node parameters
-    auto_declare<int>("update_rate", 400); // Hz
     // interfaces
     auto_declare<std::vector<std::string>>("joints", joint_names_);
     auto_declare<std::vector<std::string>>("sensors", sensor_names_);
+    // node parameters
+    auto_declare<int>("update_rate", 400);
+
+    // parameters in the derived class
+    declare_parameters();
   }
   catch (const std::exception & e) {
     fprintf(stderr, "Exception thrown during init stage with message: %s \n", e.what());
-    return controller_interface::CallbackReturn::ERROR;
-  }
-  // implementation in the derived class
-  if (on_init_impl() == controller_interface::CallbackReturn::ERROR) 
-  {
     return controller_interface::CallbackReturn::ERROR;
   }
   return controller_interface::CallbackReturn::SUCCESS;
 }
 
 controller_interface::InterfaceConfiguration 
-UnitreeControllerInterface::command_interface_configuration() const
+UnitreeControllerBase::command_interface_configuration() const
 {
   const std::vector<std::string> joint_command_interface_types = { hardware_interface::HW_IF_POSITION,
                                                                    hardware_interface::HW_IF_VELOCITY,
@@ -88,7 +69,7 @@ UnitreeControllerInterface::command_interface_configuration() const
 }
 
 controller_interface::InterfaceConfiguration
-UnitreeControllerInterface::state_interface_configuration() const
+UnitreeControllerBase::state_interface_configuration() const
 {
   const std::vector<std::string> joint_state_interface_types = { hardware_interface::HW_IF_POSITION,
                                                                  hardware_interface::HW_IF_VELOCITY,
@@ -125,7 +106,7 @@ UnitreeControllerInterface::state_interface_configuration() const
   return conf;
 }
 
-controller_interface::return_type UnitreeControllerInterface::update(
+controller_interface::return_type UnitreeControllerBase::update(
     const rclcpp::Time & time, const rclcpp::Duration & period) 
 {
   if (get_state().id() == lifecycle_msgs::msg::State::PRIMARY_STATE_INACTIVE)
@@ -135,72 +116,66 @@ controller_interface::return_type UnitreeControllerInterface::update(
   // get joint state
   for (std::size_t i = 0 ; i < 12; ++i)
   {
-    qJ_.coeffRef(i)   = qJ_interface_[i].get().get_value();
-    dqJ_.coeffRef(i)  = dqJ_interface_[i].get().get_value();
-    tauJ_.coeffRef(i) = tauJ_interface_[i].get().get_value();
+    states_.qJ.coeffRef(i)   = qJ_interface_[i].get().get_value();
+    states_.dqJ.coeffRef(i)  = dqJ_interface_[i].get().get_value();
+    states_.tauJ.coeffRef(i) = tauJ_interface_[i].get().get_value();
   }
   // get Imu state
-  imu_quat_.x() = imu_orientation_interface_[0].get().get_value();
-  imu_quat_.y() = imu_orientation_interface_[1].get().get_value();
-  imu_quat_.z() = imu_orientation_interface_[2].get().get_value();
-  imu_quat_.w() = imu_orientation_interface_[3].get().get_value();
+  states_.imu_orientation.x() = imu_orientation_interface_[0].get().get_value();
+  states_.imu_orientation.y() = imu_orientation_interface_[1].get().get_value();
+  states_.imu_orientation.z() = imu_orientation_interface_[2].get().get_value();
+  states_.imu_orientation.w() = imu_orientation_interface_[3].get().get_value();
   for (std::size_t i = 0 ; i < 3; ++i) 
   {
-    imu_ang_vel_.coeffRef(i) = imu_angular_velocity_interface_[i].get().get_value();
+    states_.imu_angular_velocity.coeffRef(i) = imu_angular_velocity_interface_[i].get().get_value();
   }
   for (std::size_t i = 0 ; i < 3; ++i) 
   {
-    imu_lin_acc_.coeffRef(i) = imu_linear_acceleration_interface_[i].get().get_value();
+    states_.imu_linear_acceleration.coeffRef(i) = imu_linear_acceleration_interface_[i].get().get_value();
   }
   // get foor force sensor states 
   for (std::size_t i = 0 ; i < 4; ++i) 
   {
-    f_.coeffRef(i) = foot_force_sensor_interface_[i].get().get_value();
+    states_.foot_force_sensor.coeffRef(i) = foot_force_sensor_interface_[i].get().get_value();
   }
 
-  // implementation in the derived class
-  const auto return_value = update_impl(time, period);
+  update(time, period, states_, commands_);
 
-  // set joint commands
+  // set joint commands that do nothing
   for (std::size_t i = 0 ; i < 12; ++i)
   {
-    qJ_cmd_interface_[i].get().set_value(qJ_cmd_.coeff(i));
-    dqJ_cmd_interface_[i].get().set_value(dqJ_cmd_.coeff(i));
-    tauJ_cmd_interface_[i].get().set_value(tauJ_cmd_.coeff(i));
-    Kp_cmd_interface_[i].get().set_value(Kp_cmd_.coeff(i));
-    Kd_cmd_interface_[i].get().set_value(Kd_cmd_.coeff(i));
+    qJ_cmd_interface_[i].get().set_value(commands_.qJ_cmd.coeff(i));
+    dqJ_cmd_interface_[i].get().set_value(commands_.dqJ_cmd.coeff(i));
+    tauJ_cmd_interface_[i].get().set_value(commands_.tauJ_cmd.coeff(i));
+    Kp_cmd_interface_[i].get().set_value(commands_.Kp_cmd.coeff(i));
+    Kd_cmd_interface_[i].get().set_value(commands_.Kd_cmd.coeff(i));
   }
 
-  return return_value;
+  return controller_interface::return_type::OK;
 }
 
 controller_interface::CallbackReturn
-UnitreeControllerInterface::on_configure(const rclcpp_lifecycle::State & previous_state)
+UnitreeControllerBase::on_configure(const rclcpp_lifecycle::State & previous_state)
 {
-  auto logger = get_node()->get_logger();
+  const auto logger = get_node()->get_logger();
 
-  // update parameters
+  // interfaces
   joint_names_ = get_node()->get_parameter("joints").as_string_array();
   sensor_names_ = get_node()->get_parameter("sensors").as_string_array();
 
-  if (!reset())
-  {
-    return controller_interface::CallbackReturn::FAILURE;
-  }
-
   if (joint_names_.empty())
   {
-    RCLCPP_ERROR(logger, "'joints' parameter is empty.");
-    return controller_interface::CallbackReturn::FAILURE;
+    RCLCPP_ERROR(get_node()->get_logger(), "'joints' parameter was empty");
+    return controller_interface::CallbackReturn::ERROR;
   }
   if (sensor_names_.empty())
   {
-    RCLCPP_ERROR(logger, "'sensors' parameter is empty.");
-    return controller_interface::CallbackReturn::FAILURE;
+    RCLCPP_ERROR(get_node()->get_logger(), "'sensors' parameter was empty");
+    return controller_interface::CallbackReturn::ERROR;
   }
 
-  // Node parameter
-  update_rate_ = static_cast<double>(get_node()->get_parameter("update_rate").get_value<int>());
+  // node parameters
+  update_rate_  = static_cast<double>(get_node()->get_parameter("update_rate").get_value<int>());
   RCLCPP_INFO(logger, "Controller will be updated at %.2f Hz.", update_rate_);
   if (update_rate_ > 0.0)
   {
@@ -212,14 +187,18 @@ UnitreeControllerInterface::on_configure(const rclcpp_lifecycle::State & previou
     return controller_interface::CallbackReturn::ERROR;
   }
 
-  // implementation in the derived class
-  const auto return_value = on_configure_impl(previous_state);
+  // read parameters in the derived class
+  auto ret = this->read_parameters();
+  if (ret != controller_interface::CallbackReturn::SUCCESS)
+  {
+    return ret;
+  }
 
-  return return_value;
+  return controller_interface::CallbackReturn::SUCCESS;
 }
 
 controller_interface::CallbackReturn
-UnitreeControllerInterface::on_activate(const rclcpp_lifecycle::State &)
+UnitreeControllerBase::on_activate(const rclcpp_lifecycle::State &)
 {
   // Joint state interfaces
   qJ_interface_.clear();
@@ -358,39 +337,11 @@ UnitreeControllerInterface::on_activate(const rclcpp_lifecycle::State &)
     return controller_interface::CallbackReturn::ERROR;
   }
 
-  // get initial joint state
-  for (std::size_t i = 0 ; i < 12; ++i)
-  {
-    qJ_.coeffRef(i)   = qJ_interface_[i].get().get_value();
-    dqJ_.coeffRef(i)  = dqJ_interface_[i].get().get_value();
-    tauJ_.coeffRef(i) = tauJ_interface_[i].get().get_value();
-  }
-
-  // get Imu state
-  imu_quat_.x() = imu_orientation_interface_[0].get().get_value();
-  imu_quat_.y() = imu_orientation_interface_[1].get().get_value();
-  imu_quat_.z() = imu_orientation_interface_[2].get().get_value();
-  imu_quat_.w() = imu_orientation_interface_[3].get().get_value();
-  for (std::size_t i = 0 ; i < 3; ++i) 
-  {
-    imu_ang_vel_.coeffRef(i) = imu_angular_velocity_interface_[i].get().get_value();
-  }
-  for (std::size_t i = 0 ; i < 3; ++i) 
-  {
-    imu_lin_acc_.coeffRef(i) = imu_linear_acceleration_interface_[i].get().get_value();
-  }
-
-  // get foot force sensor values
-  for (std::size_t i = 0 ; i < 4; ++i) 
-  {
-    f_.coeffRef(i) = foot_force_sensor_interface_[i].get().get_value();
-  }
-
   return controller_interface::CallbackReturn::SUCCESS;
 }
 
 controller_interface::CallbackReturn
-UnitreeControllerInterface::on_deactivate(const rclcpp_lifecycle::State &)
+UnitreeControllerBase::on_deactivate(const rclcpp_lifecycle::State &)
 {
   for (std::size_t i = 0; i < 12; ++i) 
   {
@@ -421,30 +372,19 @@ UnitreeControllerInterface::on_deactivate(const rclcpp_lifecycle::State &)
 }
 
 controller_interface::CallbackReturn
-UnitreeControllerInterface::on_cleanup(const rclcpp_lifecycle::State &)
+UnitreeControllerBase::on_cleanup(const rclcpp_lifecycle::State &)
 {
-  // TODO 
   return controller_interface::CallbackReturn::SUCCESS;
 }
 
 controller_interface::CallbackReturn
-UnitreeControllerInterface::on_error(const rclcpp_lifecycle::State &)
+UnitreeControllerBase::on_error(const rclcpp_lifecycle::State &)
 {
-  if (!reset())
-  {
-    return controller_interface::CallbackReturn::ERROR;
-  }
   return controller_interface::CallbackReturn::SUCCESS;
 }
 
-bool UnitreeControllerInterface::reset()
-{
-  // implementation in the derived class
-  return reset_impl();
-}
-
 controller_interface::CallbackReturn
-UnitreeControllerInterface::on_shutdown(const rclcpp_lifecycle::State &)
+UnitreeControllerBase::on_shutdown(const rclcpp_lifecycle::State &)
 {
   return controller_interface::CallbackReturn::SUCCESS;
 }

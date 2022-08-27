@@ -5,47 +5,47 @@
 namespace unitree_controller
 {
 
-controller_interface::CallbackReturn UnitreeController::on_init_impl()
+UnitreeController::UnitreeController()
+: UnitreeControllerBase() {}
+
+void UnitreeController::declare_parameters() 
 {
-  // try 
+  // // node parameters
+  // auto_declare<int>("update_rate", 400);
+}
+
+controller_interface::CallbackReturn UnitreeController::read_parameters() 
+{
+  // // interfaces
+  // joint_names_ = get_node()->get_parameter("joints").as_string_array();
+  // sensor_names_ = get_node()->get_parameter("sensors").as_string_array();
+  // // node parameters
+  // update_rate_  = static_cast<double>(get_node()->get_parameter("update_rate").get_value<int>());
+
+  // const auto logger = get_node()->get_logger();
+
+  // RCLCPP_INFO(logger, "Controller will be updated at %.2f Hz.", update_rate_);
+  // if (update_rate_ > 0.0)
   // {
+  //   update_period_ = 1.0 / update_rate_; // seconds
   // }
-  // catch (const std::exception & e) {
-  //   fprintf(stderr, "Exception thrown during init stage with message: %s \n", e.what());
+  // else
+  // {
+  //   RCLCPP_ERROR(logger, "'update_rate' must be positive, got %lf.", update_rate_);
   //   return controller_interface::CallbackReturn::ERROR;
   // }
   return controller_interface::CallbackReturn::SUCCESS;
 }
 
-controller_interface::CallbackReturn UnitreeController::on_configure_impl(
-  const rclcpp_lifecycle::State & previous_state) {
-  // 
-  return controller_interface::CallbackReturn::SUCCESS;
-}
-
-controller_interface::return_type UnitreeController::update_impl(
-    const rclcpp::Time & time, const rclcpp::Duration & period) 
+controller_interface::return_type UnitreeController::update(
+    const rclcpp::Time & time, const rclcpp::Duration & period,
+    const UnitreeStates & states, UnitreeCommands & commands) 
 {
-  auto logger = get_node()->get_logger();
-
-  const auto& imu_quat = getImuOrientation();
-  RCLCPP_INFO(logger, "Quat:  %lf, %lf, %lf, %lf.", imu_quat.x(), imu_quat.y(), imu_quat.z(), imu_quat.w());
-
-  getJointPositionCommands().setZero();
-  getJointVelocityCommands().setZero();
-  getJointTorqueCommands().setZero();
-  getJointPositionGainCommands().setZero();
-  getJointVelocityGainCommands().setZero();
-
+  RCLCPP_INFO(get_node()->get_logger(), "derived time: %.2f [s]", time.seconds());
   return controller_interface::return_type::OK;
 }
 
-bool UnitreeController::reset_impl()
-{
-  return true;
-}
-
-}  // namespace unitree_controller
+} // namespace unitree_controller
 
 #include "pluginlib/class_list_macros.hpp"
 
