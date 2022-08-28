@@ -87,9 +87,8 @@ protected:
   virtual void declare_parameters() = 0;
 
   /**
-   * Derived controllers have to read parameters in this method and set `command_interface_types_`
-   * variable. The variable is then used to propagate the command interface configuration to
-   * controller manager. The method is called from `on_configure`-method of this class.
+   * Derived controllers have to read parameters in this method.  The method is called from 
+   * `on_configure`-method of this class.
    *
    * It is expected that error handling of exceptions is done.
    *
@@ -98,14 +97,36 @@ protected:
    */
   virtual controller_interface::CallbackReturn read_parameters() = 0;
 
+  /**
+   * Derived controllers have to return joint names that are retrived from ros parameters.
+   * The variable is then used to propagate the state and command interface configuration 
+   * to controller manager. 
+   */
+  virtual std::vector<std::string> get_joint_names() const = 0;
+
+  /**
+   * Derived controllers have to return sensor names that are retrived from ros parameters.
+   * The variable is then used to propagate the state and command interface configuration 
+   * to controller manager. 
+   */
+  virtual std::vector<std::string> get_sensor_names() const = 0;
+
+  /**
+   * Derived controllers have to implement control update in this method. The result must be set in `commands`.
+   *
+   * \param[in] time The time at the start of this control loop iteration
+   * \param[in] period The measured time taken by the last control loop iteration
+   * \param[in] states States of the robot 
+   * \param[in] commands Commands to the robot
+   * \returns controller_interface::return_type::OK if control update is successfully done, 
+   * controller_interface::return_type::ERROR otherwise.
+   */
   virtual controller_interface::return_type update(
     const rclcpp::Time & time, const rclcpp::Duration & period,
     const UnitreeStates & states, UnitreeCommands & commands) = 0;
 
-  // hardware interfaces
-  std::vector<std::string> joint_names_, sensor_names_;
-
 private:
+  // hardware interfaces 
   std::vector<std::reference_wrapper<hardware_interface::LoanedStateInterface>> 
       qJ_interface_, dqJ_interface_, tauJ_interface_, 
       imu_orientation_interface_, imu_angular_velocity_interface_, 

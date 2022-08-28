@@ -8,8 +8,6 @@ namespace unitree_controller
 
 UnitreeControllerBase::UnitreeControllerBase()
 : controller_interface::ControllerInterface(), 
-  joint_names_({}), 
-  sensor_names_({}), 
   qJ_interface_(), 
   dqJ_interface_(), 
   tauJ_interface_(), 
@@ -41,6 +39,7 @@ controller_interface::CallbackReturn UnitreeControllerBase::on_init()
 controller_interface::InterfaceConfiguration 
 UnitreeControllerBase::command_interface_configuration() const
 {
+  const std::vector<std::string> joint_names = this->get_joint_names();
   const std::vector<std::string> joint_command_interface_types = { hardware_interface::HW_IF_POSITION,
                                                                    hardware_interface::HW_IF_VELOCITY,
                                                                    hardware_interface::HW_IF_EFFORT,
@@ -48,8 +47,8 @@ UnitreeControllerBase::command_interface_configuration() const
                                                                    unitree_hardware::HW_IF_VELOCITY_GAIN};
   controller_interface::InterfaceConfiguration conf;
   conf.type = controller_interface::interface_configuration_type::INDIVIDUAL;
-  conf.names.reserve(joint_names_.size() * joint_command_interface_types.size()); // Joint commands
-  for (const auto & joint_name : joint_names_)
+  conf.names.reserve(joint_names.size() * joint_command_interface_types.size()); // Joint commands
+  for (const auto & joint_name : joint_names)
   {
     for (const auto & interface_type : joint_command_interface_types)
     {
@@ -62,16 +61,18 @@ UnitreeControllerBase::command_interface_configuration() const
 controller_interface::InterfaceConfiguration
 UnitreeControllerBase::state_interface_configuration() const
 {
+  const std::vector<std::string> joint_names = this->get_joint_names();
+  const std::vector<std::string> sensor_names = this->get_sensor_names();
   const std::vector<std::string> joint_state_interface_types = { hardware_interface::HW_IF_POSITION,
                                                                  hardware_interface::HW_IF_VELOCITY,
                                                                  hardware_interface::HW_IF_EFFORT};
   controller_interface::InterfaceConfiguration conf;
   conf.type = controller_interface::interface_configuration_type::INDIVIDUAL;
-  conf.names.reserve(joint_names_.size() * joint_state_interface_types.size()  // Joint states
+  conf.names.reserve(joint_names.size() * joint_state_interface_types.size()  // Joint states
                       + 4 + 3 + 3  // Imu states (quat + gyro + acc)
                       + 4); // Foot force sensors 
   // Joint state
-  for (const auto & joint_name : joint_names_)
+  for (const auto & joint_name : joint_names)
   {
     for (const auto & interface_type : joint_state_interface_types)
     {
@@ -79,21 +80,21 @@ UnitreeControllerBase::state_interface_configuration() const
     }
   }
   // Imu state
-  conf.names.push_back(sensor_names_[0] + "/" + "orientation.x");
-  conf.names.push_back(sensor_names_[0] + "/" + "orientation.y");
-  conf.names.push_back(sensor_names_[0] + "/" + "orientation.z");
-  conf.names.push_back(sensor_names_[0] + "/" + "orientation.w");
-  conf.names.push_back(sensor_names_[0] + "/" + "angular_velocity.x");
-  conf.names.push_back(sensor_names_[0] + "/" + "angular_velocity.y");
-  conf.names.push_back(sensor_names_[0] + "/" + "angular_velocity.z");
-  conf.names.push_back(sensor_names_[0] + "/" + "linear_acceleration.x");
-  conf.names.push_back(sensor_names_[0] + "/" + "linear_acceleration.y");
-  conf.names.push_back(sensor_names_[0] + "/" + "linear_acceleration.z");
+  conf.names.push_back(sensor_names[0] + "/" + "orientation.x");
+  conf.names.push_back(sensor_names[0] + "/" + "orientation.y");
+  conf.names.push_back(sensor_names[0] + "/" + "orientation.z");
+  conf.names.push_back(sensor_names[0] + "/" + "orientation.w");
+  conf.names.push_back(sensor_names[0] + "/" + "angular_velocity.x");
+  conf.names.push_back(sensor_names[0] + "/" + "angular_velocity.y");
+  conf.names.push_back(sensor_names[0] + "/" + "angular_velocity.z");
+  conf.names.push_back(sensor_names[0] + "/" + "linear_acceleration.x");
+  conf.names.push_back(sensor_names[0] + "/" + "linear_acceleration.y");
+  conf.names.push_back(sensor_names[0] + "/" + "linear_acceleration.z");
   // Foot force sensor states
-  conf.names.push_back(sensor_names_[1] + "/" + "force.z");
-  conf.names.push_back(sensor_names_[2] + "/" + "force.z");
-  conf.names.push_back(sensor_names_[3] + "/" + "force.z");
-  conf.names.push_back(sensor_names_[4] + "/" + "force.z");
+  conf.names.push_back(sensor_names[1] + "/" + "force.z");
+  conf.names.push_back(sensor_names[2] + "/" + "force.z");
+  conf.names.push_back(sensor_names[3] + "/" + "force.z");
+  conf.names.push_back(sensor_names[4] + "/" + "force.z");
   return conf;
 }
 
@@ -130,9 +131,10 @@ controller_interface::return_type UnitreeControllerBase::update(
     states_.foot_force_sensor.coeffRef(i) = foot_force_sensor_interface_[i].get().get_value();
   }
 
+  // update controller
   update(time, period, states_, commands_);
 
-  // set joint commands that do nothing
+  // set joint commands 
   for (std::size_t i = 0 ; i < 12; ++i)
   {
     qJ_cmd_interface_[i].get().set_value(commands_.qJ_cmd.coeff(i));
@@ -159,11 +161,13 @@ UnitreeControllerBase::on_configure(const rclcpp_lifecycle::State & previous_sta
 controller_interface::CallbackReturn
 UnitreeControllerBase::on_activate(const rclcpp_lifecycle::State &)
 {
+  const std::vector<std::string> joint_names = this->get_joint_names();
+  const std::vector<std::string> sensor_names = this->get_sensor_names();
   // Joint state interfaces
   qJ_interface_.clear();
   dqJ_interface_.clear();
   tauJ_interface_.clear();
-  if (!controller_interface::get_ordered_interfaces(state_interfaces_, joint_names_, 
+  if (!controller_interface::get_ordered_interfaces(state_interfaces_, joint_names, 
                                                     hardware_interface::HW_IF_POSITION, qJ_interface_)) 
   {
     RCLCPP_ERROR(
@@ -171,7 +175,7 @@ UnitreeControllerBase::on_activate(const rclcpp_lifecycle::State &)
       12, qJ_interface_.size());
     return controller_interface::CallbackReturn::ERROR;
   }
-  if (!controller_interface::get_ordered_interfaces(state_interfaces_, joint_names_, 
+  if (!controller_interface::get_ordered_interfaces(state_interfaces_, joint_names, 
                                                     hardware_interface::HW_IF_VELOCITY, dqJ_interface_)) 
   {
     RCLCPP_ERROR(
@@ -179,7 +183,7 @@ UnitreeControllerBase::on_activate(const rclcpp_lifecycle::State &)
       12, dqJ_interface_.size());
     return controller_interface::CallbackReturn::ERROR;
   }
-  if (!controller_interface::get_ordered_interfaces(state_interfaces_, joint_names_, 
+  if (!controller_interface::get_ordered_interfaces(state_interfaces_, joint_names, 
                                                     hardware_interface::HW_IF_EFFORT, tauJ_interface_))
   {
     RCLCPP_ERROR(
@@ -192,13 +196,13 @@ UnitreeControllerBase::on_activate(const rclcpp_lifecycle::State &)
   imu_orientation_interface_.clear();
   imu_angular_velocity_interface_.clear();
   imu_linear_acceleration_interface_.clear();
-  controller_interface::get_ordered_interfaces(state_interfaces_, {sensor_names_[0]}, 
+  controller_interface::get_ordered_interfaces(state_interfaces_, {sensor_names[0]}, 
                                                "orientation.x", imu_orientation_interface_);
-  controller_interface::get_ordered_interfaces(state_interfaces_, {sensor_names_[0]}, 
+  controller_interface::get_ordered_interfaces(state_interfaces_, {sensor_names[0]}, 
                                                "orientation.y", imu_orientation_interface_);
-  controller_interface::get_ordered_interfaces(state_interfaces_, {sensor_names_[0]}, 
+  controller_interface::get_ordered_interfaces(state_interfaces_, {sensor_names[0]}, 
                                                "orientation.z", imu_orientation_interface_);
-  controller_interface::get_ordered_interfaces(state_interfaces_, {sensor_names_[0]}, 
+  controller_interface::get_ordered_interfaces(state_interfaces_, {sensor_names[0]}, 
                                                "orientation.w", imu_orientation_interface_);
   if (imu_orientation_interface_.size() != 4) 
   {
@@ -207,11 +211,11 @@ UnitreeControllerBase::on_activate(const rclcpp_lifecycle::State &)
       4, imu_orientation_interface_.size());
     return controller_interface::CallbackReturn::ERROR;
   }
-  controller_interface::get_ordered_interfaces(state_interfaces_, {sensor_names_[0]}, 
+  controller_interface::get_ordered_interfaces(state_interfaces_, {sensor_names[0]}, 
                                                "angular_velocity.x", imu_angular_velocity_interface_);
-  controller_interface::get_ordered_interfaces(state_interfaces_, {sensor_names_[0]}, 
+  controller_interface::get_ordered_interfaces(state_interfaces_, {sensor_names[0]}, 
                                                "angular_velocity.y", imu_angular_velocity_interface_);
-  controller_interface::get_ordered_interfaces(state_interfaces_, {sensor_names_[0]}, 
+  controller_interface::get_ordered_interfaces(state_interfaces_, {sensor_names[0]}, 
                                                "angular_velocity.z", imu_angular_velocity_interface_);
   if (imu_angular_velocity_interface_.size() != 3) 
   {
@@ -220,11 +224,11 @@ UnitreeControllerBase::on_activate(const rclcpp_lifecycle::State &)
       3, imu_orientation_interface_.size());
     return controller_interface::CallbackReturn::ERROR;
   }
-  controller_interface::get_ordered_interfaces(state_interfaces_, {sensor_names_[0]}, 
+  controller_interface::get_ordered_interfaces(state_interfaces_, {sensor_names[0]}, 
                                                "linear_acceleration.x", imu_linear_acceleration_interface_);
-  controller_interface::get_ordered_interfaces(state_interfaces_, {sensor_names_[0]}, 
+  controller_interface::get_ordered_interfaces(state_interfaces_, {sensor_names[0]}, 
                                                "linear_acceleration.y", imu_linear_acceleration_interface_);
-  controller_interface::get_ordered_interfaces(state_interfaces_, {sensor_names_[0]}, 
+  controller_interface::get_ordered_interfaces(state_interfaces_, {sensor_names[0]}, 
                                                "linear_acceleration.z", imu_linear_acceleration_interface_);
   if (imu_linear_acceleration_interface_.size() != 3) 
   {
@@ -238,7 +242,7 @@ UnitreeControllerBase::on_activate(const rclcpp_lifecycle::State &)
   foot_force_sensor_interface_.clear();
   for (std::size_t i = 0 ; i < 4; ++i) 
   {
-    controller_interface::get_ordered_interfaces(state_interfaces_, {sensor_names_[i+1]}, 
+    controller_interface::get_ordered_interfaces(state_interfaces_, {sensor_names[i+1]}, 
                                                  "force.z", foot_force_sensor_interface_);
   }
   if (foot_force_sensor_interface_.size() != 4) 
@@ -255,7 +259,7 @@ UnitreeControllerBase::on_activate(const rclcpp_lifecycle::State &)
   tauJ_cmd_interface_.clear();
   Kp_cmd_interface_.clear();
   Kd_cmd_interface_.clear();
-  if (!controller_interface::get_ordered_interfaces(command_interfaces_, joint_names_, 
+  if (!controller_interface::get_ordered_interfaces(command_interfaces_, joint_names, 
                                                     hardware_interface::HW_IF_POSITION, qJ_cmd_interface_))
   {
     RCLCPP_ERROR(
@@ -263,7 +267,7 @@ UnitreeControllerBase::on_activate(const rclcpp_lifecycle::State &)
       12, qJ_cmd_interface_.size());
     return controller_interface::CallbackReturn::ERROR;
   }
-  if (!controller_interface::get_ordered_interfaces(command_interfaces_, joint_names_, 
+  if (!controller_interface::get_ordered_interfaces(command_interfaces_, joint_names, 
                                                     hardware_interface::HW_IF_VELOCITY, dqJ_cmd_interface_))
   {
     RCLCPP_ERROR(
@@ -271,7 +275,7 @@ UnitreeControllerBase::on_activate(const rclcpp_lifecycle::State &)
       12, dqJ_cmd_interface_.size());
     return controller_interface::CallbackReturn::ERROR;
   }
-  if (!controller_interface::get_ordered_interfaces(command_interfaces_, joint_names_, 
+  if (!controller_interface::get_ordered_interfaces(command_interfaces_, joint_names, 
                                                     hardware_interface::HW_IF_EFFORT, tauJ_cmd_interface_)) 
   {
     RCLCPP_ERROR(
@@ -279,7 +283,7 @@ UnitreeControllerBase::on_activate(const rclcpp_lifecycle::State &)
       12, tauJ_cmd_interface_.size());
     return controller_interface::CallbackReturn::ERROR;
   }
-  if (!controller_interface::get_ordered_interfaces(command_interfaces_, joint_names_, 
+  if (!controller_interface::get_ordered_interfaces(command_interfaces_, joint_names, 
                                                     "Kp", Kp_cmd_interface_)) 
   {
     RCLCPP_ERROR(
@@ -287,7 +291,7 @@ UnitreeControllerBase::on_activate(const rclcpp_lifecycle::State &)
       12, Kp_cmd_interface_.size());
     return controller_interface::CallbackReturn::ERROR;
   }
-  if (!controller_interface::get_ordered_interfaces(command_interfaces_, joint_names_, 
+  if (!controller_interface::get_ordered_interfaces(command_interfaces_, joint_names, 
                                                     "Kd", Kd_cmd_interface_)) 
   {
     RCLCPP_ERROR(

@@ -6,7 +6,12 @@ namespace unitree_controller
 {
 
 UnitreeController::UnitreeController()
-: UnitreeControllerBase(), update_rate_(0), update_period_(0) {}
+: UnitreeControllerBase(), 
+  joint_names_({}), 
+  sensor_names_({}),
+  control_rate_(0), 
+  control_period_(0),
+  state_estimator_() {}
 
 void UnitreeController::declare_parameters() 
 {
@@ -14,7 +19,7 @@ void UnitreeController::declare_parameters()
   auto_declare<std::vector<std::string>>("joints", joint_names_);
   auto_declare<std::vector<std::string>>("sensors", sensor_names_);
   // node parameters
-  auto_declare<int>("update_rate", 400);
+  auto_declare<int>("control_rate", 400);
 }
 
 controller_interface::CallbackReturn UnitreeController::read_parameters() 
@@ -23,30 +28,38 @@ controller_interface::CallbackReturn UnitreeController::read_parameters()
   joint_names_ = get_node()->get_parameter("joints").as_string_array();
   sensor_names_ = get_node()->get_parameter("sensors").as_string_array();
   // node parameters
-  update_rate_  = static_cast<double>(get_node()->get_parameter("update_rate").get_value<int>());
+  control_rate_  = static_cast<double>(get_node()->get_parameter("control_rate").get_value<int>());
 
-  if (joint_names_.empty())
+  if (joint_names_.size() != 12)
   {
-    RCLCPP_ERROR(get_node()->get_logger(), "'joints' parameter was empty");
+    RCLCPP_ERROR(get_node()->get_logger(), "'joints' parameter has wrong size");
     return controller_interface::CallbackReturn::ERROR;
   }
-  if (sensor_names_.empty())
+  if (sensor_names_.size() != 5)
   {
-    RCLCPP_ERROR(get_node()->get_logger(), "'sensors' parameter was empty");
+    RCLCPP_ERROR(get_node()->get_logger(), "'sensors' parameter has wrong size");
     return controller_interface::CallbackReturn::ERROR;
   }
 
-  RCLCPP_INFO(get_node()->get_logger(), "Controller will be updated at %.2f Hz.", update_rate_);
-  if (update_rate_ > 0.0)
+  RCLCPP_INFO(get_node()->get_logger(), "Controller will be updated at %.2f Hz.", control_rate_);
+  if (control_rate_ > 0.0)
   {
-    update_period_ = 1.0 / update_rate_; // seconds
+    control_period_ = 1.0 / control_rate_; // seconds
   }
   else
   {
-    RCLCPP_ERROR(get_node()->get_logger(), "'update_rate' must be positive, got %lf.", update_rate_);
+    RCLCPP_ERROR(get_node()->get_logger(), "'control_rate_' must be positive, got %lf.", control_rate_);
     return controller_interface::CallbackReturn::ERROR;
   }
   return controller_interface::CallbackReturn::SUCCESS;
+}
+
+std::vector<std::string> UnitreeController::get_joint_names() const {
+  return joint_names_;  
+}
+
+std::vector<std::string> UnitreeController::get_sensor_names() const {
+  return sensor_names_;  
 }
 
 controller_interface::return_type UnitreeController::update(
