@@ -6,7 +6,7 @@ namespace unitree_controller
 {
 
 UnitreeController::UnitreeController()
-: UnitreeControllerBase(), 
+: UnitreeControllerInterface(), 
   joint_names_({}), 
   sensor_names_({}),
   control_rate_(0), 

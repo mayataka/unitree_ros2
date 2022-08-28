@@ -1,4 +1,4 @@
-#include "unitree_controller/unitree_controller_base.hpp"
+#include "unitree_controller/unitree_controller_interface.hpp"
 
 #include "controller_interface/helpers.hpp"
 
@@ -6,7 +6,7 @@
 namespace unitree_controller
 {
 
-UnitreeControllerBase::UnitreeControllerBase()
+UnitreeControllerInterface::UnitreeControllerInterface()
 : controller_interface::ControllerInterface(), 
   qJ_interface_(), 
   dqJ_interface_(), 
@@ -23,7 +23,7 @@ UnitreeControllerBase::UnitreeControllerBase()
   states_(),
   commands_() {}
 
-controller_interface::CallbackReturn UnitreeControllerBase::on_init()
+controller_interface::CallbackReturn UnitreeControllerInterface::on_init()
 {
   try 
   {
@@ -37,7 +37,7 @@ controller_interface::CallbackReturn UnitreeControllerBase::on_init()
 }
 
 controller_interface::InterfaceConfiguration 
-UnitreeControllerBase::command_interface_configuration() const
+UnitreeControllerInterface::command_interface_configuration() const
 {
   const std::vector<std::string> joint_names = this->get_joint_names();
   const std::vector<std::string> joint_command_interface_types = { hardware_interface::HW_IF_POSITION,
@@ -59,7 +59,7 @@ UnitreeControllerBase::command_interface_configuration() const
 }
 
 controller_interface::InterfaceConfiguration
-UnitreeControllerBase::state_interface_configuration() const
+UnitreeControllerInterface::state_interface_configuration() const
 {
   const std::vector<std::string> joint_names = this->get_joint_names();
   const std::vector<std::string> sensor_names = this->get_sensor_names();
@@ -98,7 +98,7 @@ UnitreeControllerBase::state_interface_configuration() const
   return conf;
 }
 
-controller_interface::return_type UnitreeControllerBase::update(
+controller_interface::return_type UnitreeControllerInterface::update(
     const rclcpp::Time & time, const rclcpp::Duration & period) 
 {
   if (get_state().id() == lifecycle_msgs::msg::State::PRIMARY_STATE_INACTIVE)
@@ -148,7 +148,7 @@ controller_interface::return_type UnitreeControllerBase::update(
 }
 
 controller_interface::CallbackReturn
-UnitreeControllerBase::on_configure(const rclcpp_lifecycle::State & previous_state)
+UnitreeControllerInterface::on_configure(const rclcpp_lifecycle::State & previous_state)
 {
   auto ret = this->read_parameters();
   if (ret != controller_interface::CallbackReturn::SUCCESS)
@@ -159,7 +159,7 @@ UnitreeControllerBase::on_configure(const rclcpp_lifecycle::State & previous_sta
 }
 
 controller_interface::CallbackReturn
-UnitreeControllerBase::on_activate(const rclcpp_lifecycle::State &)
+UnitreeControllerInterface::on_activate(const rclcpp_lifecycle::State &)
 {
   const std::vector<std::string> joint_names = this->get_joint_names();
   const std::vector<std::string> sensor_names = this->get_sensor_names();
@@ -304,7 +304,7 @@ UnitreeControllerBase::on_activate(const rclcpp_lifecycle::State &)
 }
 
 controller_interface::CallbackReturn
-UnitreeControllerBase::on_deactivate(const rclcpp_lifecycle::State &)
+UnitreeControllerInterface::on_deactivate(const rclcpp_lifecycle::State &)
 {
   for (std::size_t i = 0; i < 12; ++i) 
   {
@@ -335,19 +335,19 @@ UnitreeControllerBase::on_deactivate(const rclcpp_lifecycle::State &)
 }
 
 controller_interface::CallbackReturn
-UnitreeControllerBase::on_cleanup(const rclcpp_lifecycle::State &)
+UnitreeControllerInterface::on_cleanup(const rclcpp_lifecycle::State &)
 {
   return controller_interface::CallbackReturn::SUCCESS;
 }
 
 controller_interface::CallbackReturn
-UnitreeControllerBase::on_error(const rclcpp_lifecycle::State &)
+UnitreeControllerInterface::on_error(const rclcpp_lifecycle::State &)
 {
   return controller_interface::CallbackReturn::SUCCESS;
 }
 
 controller_interface::CallbackReturn
-UnitreeControllerBase::on_shutdown(const rclcpp_lifecycle::State &)
+UnitreeControllerInterface::on_shutdown(const rclcpp_lifecycle::State &)
 {
   return controller_interface::CallbackReturn::SUCCESS;
 }

@@ -1,5 +1,5 @@
-#ifndef UNITREE_CONTROLLER__UNITREE_CONTROLLER_BASE_HPP_
-#define UNITREE_CONTROLLER__UNITREE_CONTROLLER_BASE_HPP_
+#ifndef UNITREE_CONTROLLER__UNITREE_CONTROLLER_INTERFACE_HPP_
+#define UNITREE_CONTROLLER__UNITREE_CONTROLLER_INTERFACE_HPP_
 
 #include <chrono>
 #include <string>
@@ -34,11 +34,11 @@ namespace unitree_controller
 
 using namespace std::chrono_literals;  // NOLINT
 
-class UnitreeControllerBase : public controller_interface::ControllerInterface
+class UnitreeControllerInterface : public controller_interface::ControllerInterface
 {
 public:
   UNITREE_CONTROLLER_PUBLIC 
-  UnitreeControllerBase();
+  UnitreeControllerInterface();
 
   UNITREE_CONTROLLER_PUBLIC
   controller_interface::CallbackReturn on_init() override;
@@ -142,4 +142,4 @@ private:
 
 }  // namespace unitree_controller
 
-#endif // UNITREE_CONTROLLER__UNITREE_CONTROLLER_BASE_HPP_
+#endif // UNITREE_CONTROLLER__UNITREE_CONTROLLER_INTERFACE_HPP_

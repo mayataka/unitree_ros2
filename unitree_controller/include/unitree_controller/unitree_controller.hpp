@@ -1,7 +1,7 @@
 #ifndef UNITREE_CONTROLLER__UNITREE_CONTROLLER_HPP_
 #define UNITREE_CONTROLLER__UNITREE_CONTROLLER_HPP_
 
-#include "unitree_controller/unitree_controller_base.hpp"
+#include "unitree_controller/unitree_controller_interface.hpp"
 #include "unitree_controller/types.hpp"
 #include "unitree_controller/visibility_control.h"
 
@@ -13,7 +13,7 @@ namespace unitree_controller
 
 using namespace std::chrono_literals;  // NOLINT
 
-class UnitreeController : public UnitreeControllerBase
+class UnitreeController : public UnitreeControllerInterface
 {
 public:
   UNITREE_CONTROLLER_PUBLIC 
