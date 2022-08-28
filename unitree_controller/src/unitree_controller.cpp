@@ -21,6 +21,7 @@ void UnitreeController::declare_parameters()
   // node parameters
   auto_declare<int>("control_rate", 400);
   // state estimator settings
+  auto_declare<std::string>("state_estimator_settings.urdf_pkg", "");
   auto_declare<std::string>("state_estimator_settings.urdf_path", "");
   auto_declare<std::string>("state_estimator_settings.imu_frame", "imu_link");
   auto_declare<std::vector<std::string>>("state_estimator_settings.contact_frames", 
@@ -76,8 +77,11 @@ controller_interface::CallbackReturn UnitreeController::read_parameters()
     return controller_interface::CallbackReturn::ERROR;
   }
 
+  const std::string state_estimator_urdf_path
+      = ament_index_cpp::get_package_share_directory(get_node()->get_parameter("state_estimator_settings.urdf_pkg").as_string())
+        + "/" + get_node()->get_parameter("state_estimator_settings.urdf_path").as_string();
   legged_state_estimator::LeggedStateEstimatorSettings state_estimator_settings;
-  state_estimator_settings.urdf_path = get_node()->get_parameter("state_estimator_settings.urdf_path").as_string();
+  state_estimator_settings.urdf_path = state_estimator_urdf_path;
   state_estimator_settings.imu_frame = get_node()->get_parameter("state_estimator_settings.imu_frame").as_string();
   state_estimator_settings.contact_frames = get_node()->get_parameter("state_estimator_settings.contact_frames").as_string_array();
   state_estimator_settings.contact_estimator_settings.beta0 
@@ -115,10 +119,12 @@ controller_interface::CallbackReturn UnitreeController::read_parameters()
   state_estimator_settings.lpf_tauJ_cutoff_frequency
       = static_cast<double>(get_node()->get_parameter("state_estimator_settings.lpf_tauJ_cutoff_frequency").as_int());
 
-  try {
+  try 
+  {
     state_estimator_ = legged_state_estimator::LeggedStateEstimator(state_estimator_settings);
   }
-  catch (const std::exception & e) {
+  catch (const std::exception & e) 
+  {
     fprintf(stderr, "Exception thrown during constructing LeggedStateEstimator with message: %s \n", e.what());
     return controller_interface::CallbackReturn::ERROR;
   }

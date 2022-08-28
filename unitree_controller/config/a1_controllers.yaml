@@ -98,7 +98,8 @@ unitree_controller:
       - RR_foot_force_sensor
 
     state_estimator_settings:
-      urdf_path: "$(find a1_description)/urdf/a1.urdf"
+      urdf_pkg: a1_description
+      urdf_path: urdf/a1.urdf
       imu_frame: imu_link
       contact_frames: ["FL_foot", "FR_foot", "RL_foot", "RR_foot"]
       contact_estimator_settings:
