@@ -1,8 +1,8 @@
 # unitree_ros2
-A ROS2 package for unitree robots.
+An unofficial ROS2 package for Unitree's quadruped robots.
 
 # Requirements
-- [lcm](https://lcm-proj.github.io/)
+- Ubuntu 22.04 LTS and ROS2 Humble
+- [lcm](https://lcm-proj.github.io/) (for the communication)
 - [Eigen3](https://eigen.tuxfamily.org/index.php?title=Main_Page) (for state estimation and whole-body control)
 - [Pinocchio](https://github.com/stack-of-tasks/pinocchio) (for state estimation and whole-body control)
-- [eiquadprog](https://github.com/stack-of-tasks/eiquadprog) (for whole-body control)
