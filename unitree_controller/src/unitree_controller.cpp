@@ -11,7 +11,13 @@ UnitreeController::UnitreeController()
   sensor_names_({}),
   control_rate_(0), 
   control_period_(0),
-  state_estimator_() {}
+  zero_torque_controller_(PDController::ZeroTorqueController()), 
+  standing_up_controller_(PDController::StandingUpController()), 
+  sitting_down_controller_(PDController::SittingDownController())
+{
+  set_contro_mode_srv_ = get_node()->create_service()<unitree_msgs::srv::SetControMode>(
+      "set_control_mode", std::bind(&UnitreeController::setControlModeCallback, this, std::placeholders::_1, std::placeholders::_2));
+}
 
 void UnitreeController::declare_parameters() 
 {
@@ -20,31 +26,6 @@ void UnitreeController::declare_parameters()
   auto_declare<std::vector<std::string>>("sensors", sensor_names_);
   // node parameters
   auto_declare<int>("control_rate", 400);
-  // state estimator settings
-  auto_declare<std::string>("state_estimator_settings.urdf_pkg", "");
-  auto_declare<std::string>("state_estimator_settings.urdf_path", "");
-  auto_declare<std::string>("state_estimator_settings.imu_frame", "imu_link");
-  auto_declare<std::vector<std::string>>("state_estimator_settings.contact_frames", 
-                                         {"FL_foot", "FR_foot", "RL_foot", "RR_foot"});
-  auto_declare<std::vector<double>>("state_estimator_settings.contact_estimator_settings.beta0", 
-                                    {-30.0, -30.0, -30.0, -30.0});
-  auto_declare<std::vector<double>>("state_estimator_settings.contact_estimator_settings.beta1", 
-                                    {2.0, 2.0, 2.0, 2.0});
-  auto_declare<double>("state_estimator_settings.contact_estimator_settings.contact_force_covariance_alpha", 0.01);
-  auto_declare<double>("state_estimator_settings.contact_estimator_settings.contact_probability_threshold", 0.5);
-  auto_declare<double>("state_estimator_settings.noise_params.gyroscope_noise", 0.01);
-  auto_declare<double>("state_estimator_settings.noise_params.accelerometer_noise", 0.1);
-  auto_declare<double>("state_estimator_settings.noise_params.gyroscope_bias_noise", 0.00001);
-  auto_declare<double>("state_estimator_settings.noise_params.accelerometer_bias_noise", 0.0001);
-  auto_declare<double>("state_estimator_settings.noise_params.contact_noise", 0.1);
-  auto_declare<bool>("state_estimator_settings.dynamic_contact_estimation", false);
-  auto_declare<double>("state_estimator_settings.contact_position_noise", 0.01);
-  auto_declare<double>("state_estimator_settings.contact_rotation_noise", 0.01);
-  auto_declare<int>("state_estimator_settings.lpf_gyro_accel_cutoff_frequency", 250);
-  auto_declare<int>("state_estimator_settings.lpf_lin_accel_cutoff_frequency", 250);
-  auto_declare<int>("state_estimator_settings.lpf_dqJ_cutoff_frequency", 10);
-  auto_declare<int>("state_estimator_settings.lpf_ddqJ_cutoff_frequency", 5);
-  auto_declare<int>("state_estimator_settings.lpf_tauJ_cutoff_frequency", 10);
 }
 
 controller_interface::CallbackReturn UnitreeController::read_parameters() 
@@ -77,58 +58,6 @@ controller_interface::CallbackReturn UnitreeController::read_parameters()
     return controller_interface::CallbackReturn::ERROR;
   }
 
-  const std::string state_estimator_urdf_path
-      = ament_index_cpp::get_package_share_directory(get_node()->get_parameter("state_estimator_settings.urdf_pkg").as_string())
-        + "/" + get_node()->get_parameter("state_estimator_settings.urdf_path").as_string();
-  legged_state_estimator::LeggedStateEstimatorSettings state_estimator_settings;
-  state_estimator_settings.urdf_path = state_estimator_urdf_path;
-  state_estimator_settings.imu_frame = get_node()->get_parameter("state_estimator_settings.imu_frame").as_string();
-  state_estimator_settings.contact_frames = get_node()->get_parameter("state_estimator_settings.contact_frames").as_string_array();
-  state_estimator_settings.contact_estimator_settings.beta0 
-      = get_node()->get_parameter("state_estimator_settings.contact_estimator_settings.beta0").as_double_array();
-  state_estimator_settings.contact_estimator_settings.beta1 
-      = get_node()->get_parameter("state_estimator_settings.contact_estimator_settings.beta1").as_double_array();
-  state_estimator_settings.contact_estimator_settings.contact_force_covariance_alpha 
-      = get_node()->get_parameter("state_estimator_settings.contact_estimator_settings.contact_force_covariance_alpha").as_double();
-  state_estimator_settings.contact_estimator_settings.contact_probability_threshold 
-      = get_node()->get_parameter("state_estimator_settings.contact_estimator_settings.contact_probability_threshold").as_double();
-  state_estimator_settings.noise_params.setGyroscopeNoise(
-    get_node()->get_parameter("state_estimator_settings.noise_params.gyroscope_noise").as_double());
-  state_estimator_settings.noise_params.setAccelerometerNoise(
-    get_node()->get_parameter("state_estimator_settings.noise_params.accelerometer_noise").as_double());
-  state_estimator_settings.noise_params.setGyroscopeBiasNoise(
-    get_node()->get_parameter("state_estimator_settings.noise_params.gyroscope_bias_noise").as_double());
-  state_estimator_settings.noise_params.setAccelerometerBiasNoise(
-    get_node()->get_parameter("state_estimator_settings.noise_params.accelerometer_bias_noise").as_double());
-  state_estimator_settings.noise_params.setContactNoise(
-    get_node()->get_parameter("state_estimator_settings.noise_params.contact_noise").as_double());
-  state_estimator_settings.dynamic_contact_estimation 
-      = get_node()->get_parameter("state_estimator_settings.dynamic_contact_estimation").as_bool();
-  state_estimator_settings.contact_position_noise
-      = get_node()->get_parameter("state_estimator_settings.contact_position_noise").as_double();
-  state_estimator_settings.contact_rotation_noise
-      = get_node()->get_parameter("state_estimator_settings.contact_rotation_noise").as_double();
-  state_estimator_settings.lpf_gyro_accel_cutoff_frequency
-      = static_cast<double>(get_node()->get_parameter("state_estimator_settings.lpf_gyro_accel_cutoff_frequency").as_int());
-  state_estimator_settings.lpf_lin_accel_cutoff_frequency
-      = static_cast<double>(get_node()->get_parameter("state_estimator_settings.lpf_lin_accel_cutoff_frequency").as_int());
-  state_estimator_settings.lpf_dqJ_cutoff_frequency
-      = static_cast<double>(get_node()->get_parameter("state_estimator_settings.lpf_dqJ_cutoff_frequency").as_int());
-  state_estimator_settings.lpf_ddqJ_cutoff_frequency
-      = static_cast<double>(get_node()->get_parameter("state_estimator_settings.lpf_ddqJ_cutoff_frequency").as_int());
-  state_estimator_settings.lpf_tauJ_cutoff_frequency
-      = static_cast<double>(get_node()->get_parameter("state_estimator_settings.lpf_tauJ_cutoff_frequency").as_int());
-
-  try 
-  {
-    state_estimator_ = legged_state_estimator::LeggedStateEstimator(state_estimator_settings);
-  }
-  catch (const std::exception & e) 
-  {
-    fprintf(stderr, "Exception thrown during constructing LeggedStateEstimator with message: %s \n", e.what());
-    return controller_interface::CallbackReturn::ERROR;
-  }
-
   return controller_interface::CallbackReturn::SUCCESS;
 }
 
@@ -144,8 +73,51 @@ controller_interface::return_type UnitreeController::update(
     const rclcpp::Time & time, const rclcpp::Duration & period,
     const UnitreeStates & states, UnitreeCommands & commands) 
 {
-  RCLCPP_INFO(get_node()->get_logger(), "derived time: %.2f [s]", time.seconds());
-  return controller_interface::return_type::OK;
+  control_mode_ = control_mode_rt_buffer_.readFromRT();
+
+  switch (control_mode_)
+  {
+    case ControlMode::ZeroTorque: {
+      commands.qJ_cmd   = zero_torque_controller_.qJ_cmd();
+      commands.dqJ_cmd  = zero_torque_controller_.dqJ_cmd();
+      commands.tauJ_cmd = zero_torque_controller_.tauJ_cmd();
+      commands.Kp_cmd   = zero_torque_controller_.Kp_cmd();
+      commands.Kd_cmd   = zero_torque_controller_.Kd_cmd();
+      return controller_interface::return_type::OK;
+      break;
+    }
+    case ControlMode::StandingUp: {
+      commands.qJ_cmd   = standing_up_controller_.qJ_cmd();
+      commands.dqJ_cmd  = standing_up_controller_.dqJ_cmd();
+      commands.tauJ_cmd = standing_up_controller_.tauJ_cmd();
+      commands.Kp_cmd   = standing_up_controller_.Kp_cmd();
+      commands.Kd_cmd   = standing_up_controller_.Kd_cmd();
+      return controller_interface::return_type::OK;
+      break;
+    }
+    case ControlMode::SittingDown: {
+      commands.qJ_cmd   = sitting_down_controller_.qJ_cmd();
+      commands.dqJ_cmd  = sitting_down_controller_.dqJ_cmd();
+      commands.tauJ_cmd = sitting_down_controller_.tauJ_cmd();
+      commands.Kp_cmd   = sitting_down_controller_.Kp_cmd();
+      commands.Kd_cmd   = sitting_down_controller_.Kd_cmd();
+      return controller_interface::return_type::OK;
+      break;
+    }
+    default: {
+      return controller_interface::return_type::ERROR;
+      break;
+    }
+  }
+
+  return controller_interface::return_type::ERROR;
+}
+
+void UnitreeController::setControlModeCallback(const std::shared_ptr<unitree_msgs::srv::SetControMode::Request> request,
+                                               std::shared_ptr<unitree_msgs::srv::SetControMode::Response> response) {
+  response->current_control_mode = FromControlModeToString(control_mode_rt_buffer_.readFromNonRT());
+  control_mode_rt_buffer_.writeFromNonRT(FromStringToControlMode(request->control_mode));
+  response->accept = true;
 }
 
 } // namespace unitree_controller

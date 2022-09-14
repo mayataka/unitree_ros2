@@ -4,8 +4,10 @@
 #include "unitree_controller/unitree_controller_interface.hpp"
 #include "unitree_controller/types.hpp"
 #include "unitree_controller/visibility_control.h"
+#include "unitree_controller/pd_controller.hpp"
 
-#include "legged_state_estimator/legged_state_estimator.hpp"
+#include "unitree_msgs/srv/SetControlMode.hpp"
+#include "realtime_tools/realtime_buffer.h"
 
 
 namespace unitree_controller
@@ -38,8 +40,15 @@ private:
   // node parameters
   double control_rate_, control_period_;
 
-  legged_state_estimator::LeggedStateEstimator state_estimator_;
+  // Runtime controllers 
+  ControlMode control_mode_;
+  PDController zero_torque_controller_, standing_up_controller_, sitting_down_controller_;
 
+  // Services
+  rclcpp::Service<unitree_msgs::srv::SetControMode>::SharedPtr set_contro_mode_srv_;
+  realtime_tools::RealtimeBuffer<ControlMode> control_mode_rt_buffer_;
+  void setControlModeCallback(const std::shared_ptr<unitree_msgs::srv::SetControMode::Request> request,
+                              std::shared_ptr<unitree_msgs::srv::SetControMode::Response> response);
 };
 
 } // namespace unitree_controller

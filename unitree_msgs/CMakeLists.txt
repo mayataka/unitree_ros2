@@ -24,10 +24,10 @@ find_package(rosidl_default_generators REQUIRED)
 # find_package(<dependency> REQUIRED)
 
 set(msg_files
-  "msg/State.msg"
+  "msg/States.msg"
+  "msg/Commands.msg"
 )
 set(srv_files
-  "srv/ResetStateEstimation.srv"
   "srv/SetControlMode.srv"
 )
 

@@ -29,11 +29,11 @@ find_package(eigen3_cmake_module REQUIRED)
 find_package(Eigen3 REQUIRED)
 find_package(unitree_hardware REQUIRED)
 find_package(unitree_msgs REQUIRED)
-find_package(legged_state_estimator_vendor REQUIRED)
 
 add_library(${PROJECT_NAME} SHARED
   src/unitree_controller_interface.cpp
   src/unitree_controller.cpp
+  src/pd_controller.cpp
 )
 target_include_directories(${PROJECT_NAME} PRIVATE
   include 
@@ -51,7 +51,6 @@ ament_target_dependencies(${PROJECT_NAME}
   Eigen3
   unitree_hardware
   unitree_msgs
-  legged_state_estimator_vendor
 )
 
 # Causes the visibility macros to use dllexport rather than dllimport,

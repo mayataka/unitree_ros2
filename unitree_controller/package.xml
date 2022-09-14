@@ -19,7 +19,6 @@
   <depend>geometry_msgs</depend>
   <depend>unitree_hardware</depend>
   <depend>unitree_msgs</depend>
-  <depend>legged_state_estimator_vendor</depend>
 
   <exec_depend>xacro</exec_depend>
   <exec_depend>joint_state_broadcaster</exec_depend>
